@@ -30,9 +30,10 @@ lorsque vous faite des modifs et voulez mettre en ligne
 
 -- taper git pull origin master (Avant de travailler recupérer les nouveautés des autres !important)
 
---taper - git add . (ajoute tous les fichier sur git)
-        - git commit -m "modification apporté de manière bref"  (description)
-        - git push origin master
+--taper 
+- git add . (ajoute tous les fichier sur git)
+- git commit -m "modification apporté de manière bref"  (description)
+- git push origin master
 
 
 # Respecter ses etapes pour une bon suivi du travail svp
