@@ -1,0 +1,35 @@
+C'est parfait ! Ton projet est officiellement hébergé sur GitHub. Le message new branch master -> master confirme que le transfert a réussi.
+Voici comment passer en mode travail d'équipe avec tes camarades :
+1. Inviter tes camarades sur GitHub
+Actuellement, ils peuvent voir ton code, mais pas le modifier.
+Va sur la page de ton projet : github.com.
+Clique sur l'onglet Settings (la roue dentée en haut).
+À gauche, clique sur Collaborators.
+Clique sur le bouton vert Add people.
+Tape leur pseudo ou email et valide. Ils doivent accepter l'invitation reçue par email.
+2. Leurs étapes à eux (sur leur PC)
+Une fois qu'ils ont accepté l'invitation, ils ne doivent pas faire git init. Ils doivent "cloner" ton projet :
+Ils ouvrent un terminal dans leurs documents.
+Ils tapent : git clone https://github.com/ASUS85/ACADEMOS.git
+Cela va créer un dossier ACADEMOS chez eux avec tout ton code.
+3. La routine de travail (Le cycle Git)
+Pour travailler ensemble sans tout casser, voici la règle d'or à chaque session :
+AVANT de travailler : On récupère les nouveautés des autres.
+bash
+git pull origin master
+Utilisez le code avec précaution.
+
+APRÈS avoir modifié un fichier : On envoie son travail.
+bash
+git add .
+git commit -m "J'ai ajouté la barre de navigation"
+git push origin master
+Utilisez le code avec précaution.
+
+4. Conseil : Créer un fichier README
+Sur GitHub, il est d'usage d'expliquer le projet.
+Crée un fichier nommé README.md dans ton dossier.
+Écris dedans : # Projet ACADEMOS - Application Web de [Ton école].
+Fais un add, commit et push pour l'afficher sur ta page d'accueil GitHub.
+Veux-tu que je t'explique comment gérer les "conflits" si deux camarades modifient la même ligne en même temps ?
+
