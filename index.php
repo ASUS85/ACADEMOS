@@ -7,6 +7,9 @@
 </head>
 <body>
     <div>GitHub Codespaces</div>
-    <div><h1>Bienvenue sur ACADEMOS</h1></div>
+    <div>
+        <h1>Bienvenue sur ACADEMOS</h1>
+        <p>Votre plateforme d'apprentissage en ligne</p>
+    </div>
 </body>
 </html>
