@@ -27,6 +27,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/reports/{report}/assign-jury', [ReportController::class, 'assignJury'])->name('reports.assign-jury');
     Route::get('/jury/reports', [ReportController::class, 'juryIndex'])->name('jury.reports');
     Route::post('/reports/{report}/jury-evaluate', [ReportController::class, 'juryEvaluate'])->name('reports.jury-evaluate');
+    Route::get('/admin/users', [ReportController::class, 'adminUsers'])->name('admin.users');
+    Route::get('/admin/stats', [ReportController::class, 'adminStats'])->name('admin.stats');
 });
 
 require __DIR__ . '/auth.php';

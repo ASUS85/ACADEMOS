@@ -3,23 +3,17 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Builder;  // ← LARAVEL 12 !
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        Schema::defaultStringLength(191);
+        Builder::defaultStringLength(191);  // ← LARAVEL 12 SYNTAXE !
     }
 }

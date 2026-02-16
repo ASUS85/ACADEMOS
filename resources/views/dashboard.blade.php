@@ -1,83 +1,154 @@
 <x-app-layout>
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Messages -->
+            @if (session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i><strong>✅ {{ session('success') }}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
 
-                    @if (session('success'))
-                        <div
-                            class="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg mb-6 animate-pulse">
-                            <strong>✅ {{ session('success') }}</strong>
-                        </div>
-                    @endif
+            @if (session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i><strong>❌ {{ session('error') }}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
 
-                    {{-- MESSAGES D'ERREUR --}}
-                    @if (session('error'))
-                        <div
-                            class="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-6 animate-pulse">
-                            <strong>❌ {{ session('error') }}</strong>
-                        </div>
-                    @endif
-                    <h1 class="text-3xl font-bold mb-6">🎓 ACADEMOS Dashboard</h1>
-
-                    {{-- AFFICHAGE DU RÔLE --}}
-                    <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-6">
-                        <strong>👤 Bonjour {{ auth()->user()->name }} !</strong><br>
-                        <span class="text-lg">🎭 Ton rôle : <span
-                                class="font-bold text-blue-800">{{ auth()->user()->roles->first()->name ?? 'Aucun rôle' }}</span></span>
-                    </div>
-
-                    {{-- LIENS SELON RÔLE --}}
-                    @if (auth()->user()->hasRole('admin'))
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <a href="/admin/reports"
-                                class="bg-green-500 hover:bg-green-600 text-white p-6 rounded-lg text-center">
-                                📋 Tous les rapports<br><span class="text-sm">Gérer / Affecter</span>
-                            </a>
-                            <a href="/admin/users"
-                                class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-lg text-center">
-                                👥 Gérer utilisateurs
-                            </a>
-                            <a href="/admin/stats"
-                                class="bg-purple-500 hover:bg-purple-600 text-white p-6 rounded-lg text-center">
-                                📊 Statistiques
-                            </a>
-                        </div>
-                    @elseif(auth()->user()->hasRole('jury'))
-                        <div class="bg-purple-100 border border-purple-400 text-purple-800 px-6 py-4 rounded-lg">
-                            <h2 class="text-2xl font-bold mb-4">👩‍⚖️ Mes Rapports à évaluer</h2>
-                            <p class="mb-4">{{ auth()->user()->juryReports()->count() }} rapport(s) à évaluer</p>
-                            <a href="/jury/reports"
-                                class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-bold">
-                                📊 Évaluer rapports
-                            </a>
-                        </div>
-                    @elseif(auth()->user()->hasRole('student'))
-                        <div class="bg-yellow-100 border border-yellow-400 text-yellow-800 px-6 py-4 rounded-lg">
-                            <h2 class="text-2xl font-bold mb-4">📄 Mes Rapports de Stage</h2>
-                            <a href="/student/reports/create"
-                                class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-bold">
-                                ➕ Soumettre un nouveau rapport
-                            </a>
-
-                        </div>
-                    @elseif(auth()->user()->hasRole('teacher'))
-                        <div class="bg-orange-100 border border-orange-400 text-orange-800 px-6 py-4 rounded-lg">
-                            <h2 class="text-2xl font-bold mb-4">📚 Mes Rapports à corriger</h2>
-                            <p class="mb-4">{{ auth()->user()->assignedReports()->count() }} rapport(s) affecté(s)</p>
-                            <a href="/teacher/reports"
-                                class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-bold">
-                                👀 Voir mes rapports
-                            </a>
-                        </div>
-                    @else
-                        <div class="text-center py-12">
-                            <h2 class="text-xl mb-4">⚠️ Aucun rôle assigné</h2>
-                            <p>Contacte l'administrateur</p>
-                        </div>
-                    @endif
+            <!-- Titre -->
+            <div class="d-flex align-items-center mb-5">
+                <i class="fas fa-graduation-cap fs-1 text-primary me-3"></i>
+                <div>
+                    <h1 class="h2 fw-bold mb-1">ACADEMOS Dashboard</h1>
+                    <p class="text-muted mb-0">Système de gestion des rapports de stage</p>
                 </div>
             </div>
+
+            <!-- Info Utilisateur -->
+            <div class="card border-0 shadow-sm mb-5">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3 class="h4 mb-1">👤 Bonjour {{ auth()->user()->name }} !</h3>
+                            <div class="badge bg-primary fs-6 px-3 py-2">
+                                <i class="fas fa-mask me-1"></i>
+                                Rôle : {{ auth()->user()->roles->first()->name ?? 'Aucun rôle' }}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <span class="text-muted">Connecté le {{ now()->format('d/m/Y H:i') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons selon rôle -->
+            @if (auth()->user()->hasRole('admin'))
+                <div class="row g-4 mb-5">
+                    <div class="col-md-4">
+                        <a href="{{ url('/admin/reports') }}" class="card border-0 shadow h-100 text-decoration-none">
+                            <div class="card-body p-4 text-center">
+                                <i class="fas fa-file-alt fa-3x text-success mb-3"></i>
+                                <h5 class="card-title fw-bold">📋 Tous les rapports</h5>
+                                <p class="card-text text-muted">Gérer / Affecter</p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ url('/admin/users') }}" class="card border-0 shadow h-100 text-decoration-none">
+                            <div class="card-body p-4 text-center">
+                                <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                                <h5 class="card-title fw-bold">👥 Gérer utilisateurs</h5>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ url('/admin/stats') }}" class="card border-0 shadow h-100 text-decoration-none">
+                            <div class="card-body p-4 text-center">
+                                <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+                                <h5 class="card-title fw-bold">📊 Statistiques</h5>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+            @elseif(auth()->user()->hasRole('jury'))
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow">
+                            <div class="card-body p-5">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h3 class="h4 mb-3">
+                                            <i class="fas fa-gavel text-danger me-2"></i>
+                                            Mes Rapports à évaluer
+                                        </h3>
+                                        <h2 class="display-5 fw-bold text-primary">
+                                            {{ auth()->user()->juryReports()->count() }} rapport(s)
+                                        </h2>
+                                    </div>
+                                    <div class="col-md-4 text-md-end">
+                                        <a href="/jury/reports" class="btn btn-outline-primary btn-lg px-5">
+                                            <i class="fas fa-eye me-2"></i>Évaluer
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            @elseif(auth()->user()->hasRole('student'))
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow h-100">
+                            <div class="card-body p-5 text-center">
+                                <i class="fas fa-file-upload fa-4x text-warning mb-4 opacity-75"></i>
+                                <h3 class="h4 fw-bold mb-3">📄 Soumettre Rapport</h3>
+                                <p class="text-muted mb-4">Nouveau rapport de stage</p>
+                                <a href="/student/reports/create" class="btn btn-warning btn-lg px-5">
+                                    <i class="fas fa-plus me-2"></i>Nouveau
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            @elseif(auth()->user()->hasRole('teacher'))
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow">
+                            <div class="card-body p-5">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h3 class="h4 mb-3">
+                                            <i class="fas fa-chalkboard-teacher text-success me-2"></i>
+                                            Mes Rapports à corriger
+                                        </h3>
+                                        <h2 class="display-5 fw-bold text-success">
+                                            {{ auth()->user()->assignedReports()->count() }} rapport(s)
+                                        </h2>
+                                    </div>
+                                    <div class="col-md-4 text-md-end">
+                                        <a href="/teacher/reports" class="btn btn-success btn-lg px-5">
+                                            <i class="fas fa-edit me-2"></i>Corriger
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @else
+                <div class="text-center py-12">
+                    <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4 opacity-50"></i>
+                    <h2 class="h3 mb-4">⚠️ Aucun rôle assigné</h2>
+                    <p class="lead text-muted">Contacte l'administrateur pour assigner un rôle</p>
+                </div>
+            @endif
         </div>
     </div>
+</div>
 </x-app-layout>

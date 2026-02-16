@@ -98,6 +98,24 @@ class ReportController extends Controller
         return view('jury.reports.index', compact('reports'));
     }
 
+    public function adminUsers()
+    {
+        $users = \App\Models\User::with('roles')->paginate(15);
+        return view('admin.users', compact('users'));
+    }
+
+    public function adminStats()
+    {
+        $stats = [
+            'total_reports' => \App\Models\Report::count(),
+            'total_users' => \App\Models\User::count(),
+            'students' => \App\Models\User::role('student')->count(),
+            'teachers' => \App\Models\User::role('teacher')->count(),
+            'juries' => \App\Models\User::role('jury')->count(),
+        ];
+        return view('admin.stats', compact('stats'));
+    }
+
     public function juryEvaluate(Request $request, Report $report)
     {
         $request->validate([
