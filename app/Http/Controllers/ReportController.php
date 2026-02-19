@@ -119,15 +119,15 @@ class ReportController extends Controller
     public function juryEvaluate(Request $request, Report $report)
     {
         $request->validate([
-            'jury_note_forme' => 'required|numeric|min:0|max:20',
-            'jury_note_fond' => 'required|numeric|min:0|max:20',
-            'jury_note_langage' => 'required|numeric|min:0|max:20',
-            'jury_commentaire' => 'nullable|string|max:1000',
+            'jury_technical_note' => 'required|numeric|min:0|max:20',
+            'jury_presentation_note' => 'required|numeric|min:0|max:20',
+            'jury_content_note' => 'required|numeric|min:0|max:20',
+            'jury_comment' => 'nullable|string|max:1000',
             'jury_decision' => 'required|in:Validé,Rejeté,À revoir'
         ]);
 
         // Calcul moyenne automatique (grille Cameroun)
-        $moyenne = round(($request->jury_note_forme + $request->jury_note_fond + $request->jury_note_langage) / 3, 2);
+        $moyenne = round(($request->jury_technical_note + $request->jury_presentation_note + $request->jury_content_note) / 3, 2);
 
         // Déterminer appréciation automatique
         $appreciation = match (true) {
@@ -138,18 +138,48 @@ class ReportController extends Controller
             $moyenne >= 10 => 'Passable',
             default => 'Échec'
         };
-
         $report->update([
-            'jury_note_forme' => $request->jury_note_forme,
-            'jury_note_fond' => $request->jury_note_fond,
-            'jury_note_langage' => $request->jury_note_langage,
-            'jury_moyenne_finale' => $moyenne,
-            'jury_appreciation' => $appreciation,
-            'jury_commentaire' => $request->jury_commentaire,
+            'jury_technical_note' => $request->jury_technical_note,
+            'jury_presentation_note' => $request->jury_presentation_note,
+            'jury_content_note' => $request->jury_content_note,
+            'jury_final_score' => $moyenne,
             'jury_decision' => $request->jury_decision,
+            'jury_comment' => $request->jury_comment,
             'status' => $request->jury_decision === 'Validé' ? 'Validé final' : $request->jury_decision
         ]);
 
         return redirect()->back()->with('success', "✅ Évaluation terminée ! Moyenne: {$moyenne}/20 ({$appreciation})");
+    }
+
+    public function studentDashboard()
+    {
+        $reports = auth()->user()->reports()
+            ->with(['versions.user', 'teacher', 'jury'])
+            ->latest()
+            ->get();
+        return view('student.dashboard', compact('reports'));
+    }
+
+    public function resubmit(Request $request, Report $report)
+    {
+        if (auth()->id() !== $report->student_id) abort(403);
+
+        $request->validate(['file' => 'required|file|mimes:pdf|max:10240']);
+
+        $versionNumber = $report->versions()->count() + 1;
+        $version = 'v' . $versionNumber;
+        $fileName = "rapport-{$report->id}-{$version}-" . now()->format('Ymd');
+        $filePath = $request->file('file')->storeAs('reports', $fileName, 'public');
+
+        \App\Models\ReportVersion::create([
+            'report_id' => $report->id,
+            'user_id' => auth()->id(),
+            'version' => $version,
+            'file_path' => $filePath,
+            'action' => 'modifié'
+        ]);
+
+        $report->update(['status' => 'Soumis']);
+        return back()->with('success', "✅ Version {$version} envoyée !");
     }
 }

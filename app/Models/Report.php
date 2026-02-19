@@ -45,4 +45,14 @@ class Report extends Model
     {
         return $this->belongsTo(User::class, 'jury_id');
     }
+
+    public function versions()
+    {
+        return $this->hasMany(ReportVersion::class)->orderBy('created_at', 'desc');
+    }
+
+    public function latestVersion()
+    {
+        return $this->hasOne(ReportVersion::class)->latest('created_at');
+    }
 }

@@ -31,15 +31,20 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
+            'matricule' => ['required', 'string', 'max:50', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'matricule' => $request->matricule,
             'password' => Hash::make($request->password),
         ]);
+
+        //  ASSIGNE RÔLE ÉTUDIANT AUTOMATIQUEMENT
+        $user->assignRole('student');
 
         event(new Registered($user));
 

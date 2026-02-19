@@ -1,97 +1,162 @@
 <x-app-layout>
-<div class="py-12">
-    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-            <div class="p-8">
-                <h1 class="text-3xl font-bold mb-8">👩‍⚖️ Évaluation Rapports (Jury Cameroun)</h1>
-
-                @if(session('success'))
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg mb-6">
-                        ✅ {{ session('success') }}
-                    </div>
-                @endif
-
-                @php $reports = auth()->user()->juryReports()->with('student', 'teacher')->latest()->get(); @endphp
-
-                @if($reports->count() === 0)
-                    <div class="text-center py-12 text-gray-500">
-                        <p class="text-2xl mb-4">📭 Aucun rapport à évaluer</p>
-                        <p>Les rapports seront affectés par l'administrateur après validation enseignant.</p>
-                    </div>
-                @else
-                    @foreach($reports as $report)
-                    <div class="bg-gradient-to-r from-purple-50 to-indigo-50 p-8 mb-8 rounded-xl border-l-8 border-purple-500 shadow-lg">
-                        <div class="flex justify-between items-start mb-6">
-                            <div>
-                                <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ $report->title }}</h3>
-                                <p class="text-lg text-gray-600">Étudiant : {{ $report->student->name ?? 'N/A' }}</p>
-                                <p class="text-sm text-gray-500">Enseignant : {{ $report->teacher->name ?? 'N/A' }}</p>
-                            </div>
-                            <a href="{{ asset('storage/' . $report->file_path) }}"
-                               class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold inline-flex items-center"
-                               target="_blank">
-                                📥 Télécharger PDF
-                            </a>
-                        </div>
-
-                        <div class="bg-blue-50 p-6 rounded-lg mb-6">
-                            <h4 class="font-bold text-lg mb-3 text-blue-900">💬 Commentaire Enseignant</h4>
-                            <blockquote class="text-gray-800 italic p-4 bg-white rounded border-l-4 border-blue-400">
-                                "{{ $report->teacher_comment ?? 'Aucun commentaire' }}"
-                            </blockquote>
-                        </div>
-
-                        <form method="POST" action="{{ route('reports.jury-evaluate', $report) }}" class="space-y-6">
-                            @csrf
-
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2">📝 Note Forme (sur 20)</label>
-                                    <input type="number" name="jury_note_forme" min="0" max="20" step="0.5" step="0.5"
-                                           class="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition-all" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2">📚 Note Fond (sur 20)</label>
-                                    <input type="number" name="jury_note_fond" min="0" max="20" step="0.5"
-                                           class="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition-all" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2">💬 Note Langage (sur 20)</label>
-                                    <input type="number" name="jury_note_langage" min="0" max="20" step="0.5"
-                                           class="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition-all" required>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2">📝 Commentaire Jury</label>
-                                    <textarea name="jury_commentaire" rows="4"
-                                              class="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition-all"
-                                              placeholder="Commentaire détaillé sur la qualité du rapport..."></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2">✅ Décision finale</label>
-                                    <select name="jury_decision" class="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-200 focus:border-purple-500" required>
-                                        <option value="">Sélectionner décision</option>
-                                        <option value="Validé">✅ Validé</option>
-                                        <option value="Rejeté">❌ Rejeté</option>
-                                        <option value="À revoir">⚠️ À revoir</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="text-center pt-6 border-t border-gray-200">
-                                <button type="submit"
-                                        class="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-12 py-4 rounded-xl font-bold text-xl shadow-lg transform hover:scale-105 transition-all">
-                                    🎓 FINALISER ÉVALUATION
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                    @endforeach
-                @endif
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-gavel fa-2x text-primary me-3"></i>
+                <div>
+                    <h1 class="h3 mb-1 fw-bold">👩‍⚖️ Évaluation Rapports (Grille Cameroun)</h1>
+                    <p class="text-muted mb-0">
+                        {{ $reports->count() }} rapport(s) à évaluer
+                    </p>
+                </div>
             </div>
         </div>
     </div>
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show border-start border-success border-5" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>{{ session('success') }}</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if($reports->count() === 0)
+        <div class="text-center py-12">
+            <i class="fas fa-file-circle-question fa-4x text-muted mb-4 opacity-75"></i>
+            <h3 class="h4 text-muted mb-3">📭 Aucun rapport affecté</h3>
+            <p class="text-muted lead">Les rapports vous seront assignés après validation enseignant.</p>
+        </div>
+    @else
+        @foreach($reports as $report)
+        <div class="card shadow-lg border-0 mb-6 overflow-hidden">
+            <div class="card-header bg-gradient-primary text-white position-relative overflow-hidden">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="h4 mb-1 fw-bold">
+                            <i class="fas fa-file-alt me-2 opacity-75"></i>
+                            {{ Str::limit($report->title, 60) }}
+                        </h3>
+                        <div class="d-flex flex-wrap gap-2 small">
+                            <span class="badge bg-light text-dark">
+                                👨‍🎓 {{ $report->student->name ?? 'Étudiant' }}
+                            </span>
+                            <span class="badge bg-info">
+                                👨‍🏫 {{ $report->teacher->name ?? 'Enseignant' }}
+                            </span>
+                            <span class="badge bg-warning text-dark">
+                                {{ $report->created_at->format('d/m/Y') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                        <a href="{{ asset('storage/' . $report->file_path) }}"
+                           class="btn btn-outline-light btn-sm px-4" target="_blank">
+                            <i class="fas fa-file-pdf me-1"></i> PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <!-- Commentaire Enseignant -->
+                @if($report->teacher_comment)
+                <div class="p-5 bg-light border-bottom">
+                    <h6 class="fw-bold text-primary mb-3">
+                        <i class="fas fa-comment-dots me-2"></i>Commentaire Enseignant
+                    </h6>
+                    <div class="bg-white p-4 rounded border-start border-primary border-4">
+                        <p class="mb-2">"{{ Str::limit($report->teacher_comment, 200) }}"</p>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            {{ $report->updated_at->format('d/m/Y H:i') }}
+                        </small>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Formulaire Évaluation -->
+                <form method="POST" action="{{ url('/reports/' . $report->id . '/jury-evaluate') }}" class="p-6">
+                    @csrf
+
+                    <div class="row g-4 mb-5">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-primary mb-3">
+                                📝 Technique (sur 20)
+                            </label>
+                            <input type="number" name="jury_technical_note"
+                                   min="0" max="20" step="0.5" required
+                                   class="form-control form-control-lg border-2 border-primary-subtle rounded-3 shadow-sm focus-ring focus-ring-purple"
+                                   placeholder="Ex: 15.5">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-success mb-3">
+                                🎨 Présentation (sur 20)
+                            </label>
+                            <input type="number" name="jury_presentation_note"
+                                   min="0" max="20" step="0.5" required
+                                   class="form-control form-control-lg border-2 border-success-subtle rounded-3 shadow-sm focus-ring focus-ring-purple"
+                                   placeholder="Ex: 14.0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-info mb-3">
+                                📚 Contenu (sur 20)
+                            </label>
+                            <input type="number" name="jury_content_note"
+                                   min="0" max="20" step="0.5" required
+                                   class="form-control form-control-lg border-2 border-info-subtle rounded-3 shadow-sm focus-ring focus-ring-purple"
+                                   placeholder="Ex: 16.5">
+                        </div>
+                    </div>
+
+                    <div class="row g-4 mb-5">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold text-secondary mb-3">
+                                💬 Commentaire détaillé
+                            </label>
+                            <textarea name="jury_comment" rows="4"
+                                      class="form-control border-2 border-secondary-subtle rounded-3 shadow-sm focus-ring focus-ring-purple"
+                                      placeholder="Analyse détaillée de la qualité du rapport..."></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-danger mb-3">
+                                ⚖️ Décision finale
+                            </label>
+                            <select name="jury_decision" class="form-select form-select-lg border-2 border-danger-subtle rounded-3 shadow-sm focus-ring focus-ring-purple" required>
+                                <option value="">Choisir décision</option>
+                                <option value="Validé">✅ Validé</option>
+                                <option value="Rejeté">❌ Rejeté</option>
+                                <option value="À revoir">⚠️ À revoir</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="text-center pt-4">
+                        <button type="submit"
+                                class="btn btn-primary btn-lg px-8 py-3 fw-bold rounded-pill shadow-lg border-0">
+                            <i class="fas fa-graduation-cap me-2"></i>
+                            FINALISER ÉVALUATION
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        @endforeach
+    @endif
 </div>
 </x-app-layout>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.focus-ring:focus {
+    box-shadow: 0 0 0 0.25rem rgba(147, 51, 234, 0.25) !important;
+}
+
+.focus-ring-purple:focus {
+    box-shadow: 0 0 0 0.375rem rgba(139, 69, 193, 0.25) !important;
+}
+</style>

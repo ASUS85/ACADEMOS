@@ -22,9 +22,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+       'name', 'email', 'password', 'matricule', 'grade', 'specialite'
     ];
 
     /**
@@ -36,6 +34,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
 
     /**
      * Get the attributes that should be cast.
@@ -65,4 +64,6 @@ class User extends Authenticatable
     {
         return $this->hasMany(Report::class, 'jury_id');
     }
+
+
 }

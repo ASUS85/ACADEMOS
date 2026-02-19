@@ -11,7 +11,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="/student/reports" enctype="multipart/form-data" class="space-y-6">
+                <form method="POST" action="{{ url('/student/reports') }}" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
                     <div>
