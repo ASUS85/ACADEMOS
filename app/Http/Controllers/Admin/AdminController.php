@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -17,13 +18,13 @@ class AdminController extends Controller
 
     public function create()
     {
-        if(!auth()->user()->hasRole('superAdmin')) abort(403);
+        if (!auth()->user()->hasRole('superAdmin')) abort(403);
         return view('admin.admins.create');
     }
 
     public function store(Request $request)
     {
-        if(!auth()->user()->hasRole('superAdmin')) abort(403);
+        if (!auth()->user()->hasRole('superAdmin')) abort(403);
 
         $request->validate([
             'name' => 'required',
@@ -37,7 +38,7 @@ class AdminController extends Controller
         return redirect()->route('admin.admins.index')->with('success', '✅ Admin créé !');
     }
 
-     public function superadminUsers()
+    public function superadminUsers()
     {
         $users = User::with('roles')->paginate(20);
         return view('admin.superadmin.users', compact('users'));
@@ -52,6 +53,35 @@ class AdminController extends Controller
         ];
         return view('admin.superadmin.reports', compact('reports', 'stats'));
     }
+
+    public function storeAdmin(Request $request)
+    {
+        $admin = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make('password123'),
+            'department_id' => $request->department_id
+        ]);
+
+        $admin->assignRole('admin');
+    }
+
+
+    public function storeTeacher(Request $request)
+    {
+        $teacher = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make('password123'),
+            'department_id' => auth()->user()->department_id
+        ]);
+
+        $teacher->assignRole('teacher');
+
+        $teacher->filieres()->sync($request->filieres);
+    }
+
+
 
     public function systemConfig()
     {

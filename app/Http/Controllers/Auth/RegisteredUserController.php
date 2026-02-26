@@ -36,11 +36,17 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        // Récupérer filiere
+        $filiere = Filiere::findOrFail($request->filiere_id);
+
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'matricule' => $request->matricule,
             'password' => Hash::make($request->password),
+            'filiere_id' => $filiere->id,
+            'department_id' => $filiere->department_id
         ]);
 
         //  ASSIGNE RÔLE ÉTUDIANT AUTOMATIQUEMENT

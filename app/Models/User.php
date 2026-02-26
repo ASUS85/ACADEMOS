@@ -22,7 +22,12 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-       'name', 'email', 'password', 'matricule', 'grade', 'specialite'
+        'name',
+        'email',
+        'password',
+        'matricule',
+        'grade',
+        'specialite'
     ];
 
     /**
@@ -65,5 +70,18 @@ class User extends Authenticatable
         return $this->hasMany(Report::class, 'jury_id');
     }
 
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
 
+    public function filiere()
+    {
+        return $this->belongsTo(Filiere::class);
+    }
+
+    public function filieres()
+    {
+        return $this->belongsToMany(Filiere::class, 'teacher_filiere');
+    }
 }

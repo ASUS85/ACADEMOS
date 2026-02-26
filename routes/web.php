@@ -31,11 +31,12 @@ Route::middleware('auth')->group(function () {
     // SUPERADMIN (avec middleware role)
     Route::prefix('superadmin')
         ->name('superadmin.')
-        ->middleware('role:superAdmin')
+        ->middleware('role:admin|superadmin')
         ->group(function () {
             Route::get('/users', [AdminController::class, 'superadminUsers'])->name('users');
             Route::get('/reports', [AdminController::class, 'superadminReports'])->name('reports');
             Route::get('/system', [AdminController::class, 'systemConfig'])->name('system');
+            Route::get('/stats', [AdminController::class, 'superadminStats'])->name('stats');
             Route::resource('admins', AdminController::class);
         });
 
