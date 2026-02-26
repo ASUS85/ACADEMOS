@@ -38,6 +38,284 @@ lorsque vous faite des modifs et voulez mettre en ligne
 
 # Respecter ses etapes pour une bon suivi du travail svp
 
+#Archtecture du Projet 
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── Admin/
+│   │   │   │   ├── AdminController.php
+│   │   │   │   └── TeacherController.php
+│   │   │   ├── Auth/
+│   │   │   │   ├── AuthenticatedSessionController.php
+│   │   │   │   ├── ConfirmablePasswordController.php
+│   │   │   │   ├── EmailVerificationNotificationController.php
+│   │   │   │   ├── EmailVerificationPromptController.php
+│   │   │   │   ├── NewPasswordController.php
+│   │   │   │   ├── PasswordController.php
+│   │   │   │   ├── PasswordResetLinkController.php
+│   │   │   │   ├── RegisteredUserController.php
+│   │   │   │   └── VerifyEmailController.php
+│   │   │   ├── Controller.php
+│   │   │   ├── ProfileController.php
+│   │   │   └── ReportController.php
+│   │   ├── Requests/
+│   │   │   ├── Auth/
+│   │   │   │   └── LoginRequest.php
+│   │   │   └── ProfileUpdateRequest.php
+│   │   └── Middleware
+│   ├── Models/
+│   │   ├── Report.php
+│   │   ├── ReportVersion.php
+│   │   └── User.php
+│   ├── Providers/
+│   │   └── AppServiceProvider.php
+│   └── View/
+│       └── Components/
+│           ├── AppLayout.php
+│           └── GuestLayout.php
+├── bootstrap/
+│   ├── cache/
+│   │   └── .gitignore
+│   ├── app.php
+│   └── providers.php
+├── config/
+│   ├── app.php
+│   ├── auth.php
+│   ├── cache.php
+│   ├── database.php
+│   ├── filesystems.php
+│   ├── logging.php
+│   ├── mail.php
+│   ├── permission.php
+│   ├── queue.php
+│   ├── services.php
+│   ├── session.php
+│   └── tinker.php
+├── database/
+│   ├── factories/
+│   │   └── UserFactory.php
+│   ├── migrations/
+│   │   ├── 0001_01_01_000000_create_users_table.php
+│   │   ├── 0001_01_01_000001_create_cache_table.php
+│   │   ├── 0001_01_01_000002_create_jobs_table.php
+│   │   ├── 2026_02_15_173718_create_permission_tables.php
+│   │   ├── 2026_02_15_194421_create_reports_table.php
+│   │   ├── 2026_02_15_212104_add_comments_to_reports_table.php
+│   │   ├── 2026_02_15_214851_add_jury_evaluation_to_reports_table.php
+│   │   ├── 2026_02_17_140555_create_report_versions_table.php
+│   │   └── 2026_02_17_143752_add_user_fields_for_roles.php
+│   ├── seeders/
+│   │   ├── DatabaseSeeder.php
+│   │   └── RoleSeeder.php
+│   └── .gitignore
+├── docker/
+│   ├── 8.0/
+│   │   ├── Dockerfile
+│   │   ├── php.ini
+│   │   ├── start-container
+│   │   └── supervisord.conf
+│   ├── 8.1/
+│   │   ├── Dockerfile
+│   │   ├── php.ini
+│   │   ├── start-container
+│   │   └── supervisord.conf
+│   ├── 8.2/
+│   │   ├── Dockerfile
+│   │   ├── php.ini
+│   │   ├── start-container
+│   │   └── supervisord.conf
+│   ├── 8.3/
+│   │   ├── Dockerfile
+│   │   ├── php.ini
+│   │   ├── start-container
+│   │   └── supervisord.conf
+│   ├── 8.4/
+│   │   ├── Dockerfile
+│   │   ├── php.ini
+│   │   ├── start-container
+│   │   └── supervisord.conf
+│   ├── 8.5/
+│   │   ├── Dockerfile
+│   │   ├── php.ini
+│   │   ├── start-container
+│   │   └── supervisord.conf
+│   ├── mariadb/
+│   │   └── create-testing-database.sh
+│   ├── mysql/
+│   │   └── create-testing-database.sh
+│   └── pgsql/
+│       └── create-testing-database.sql
+├── public/
+│   ├── .htaccess
+│   ├── favicon.ico
+│   ├── index.php
+│   └── robots.txt
+├── resources/
+│   ├── css/
+│   │   └── app.css
+│   ├── js/
+│   │   ├── app.js
+│   │   └── bootstrap.js
+│   └── views/
+│       ├── admin/
+│       │   ├── admins/
+│       │   │   └── index.blade.php
+│       │   ├── reports/
+│       │   │   └── index.blade.php
+│       │   ├── superadmin/
+│       │   │   └── users.blade.php
+│       │   ├── teachers/
+│       │   │   └── create.blade.php
+│       │   ├── stats.blade.php
+│       │   └── users.blade.php
+│       ├── auth/
+│       │   ├── confirm-password.blade.php
+│       │   ├── forgot-password.blade.php
+│       │   ├── login.blade.php
+│       │   ├── register.blade.php
+│       │   ├── reset-password.blade.php
+│       │   └── verify-email.blade.php
+│       ├── components/
+│       │   ├── application-logo.blade.php
+│       │   ├── auth-session-status.blade.php
+│       │   ├── danger-button.blade.php
+│       │   ├── dropdown-link.blade.php
+│       │   ├── dropdown.blade.php
+│       │   ├── input-error.blade.php
+│       │   ├── input-label.blade.php
+│       │   ├── modal.blade.php
+│       │   ├── nav-link.blade.php
+│       │   ├── primary-button.blade.php
+│       │   ├── responsive-nav-link.blade.php
+│       │   ├── secondary-button.blade.php
+│       │   └── text-input.blade.php
+│       ├── errors/
+│       │   ├── 401.blade.php
+│       │   ├── 402.blade.php
+│       │   ├── 403.blade.php
+│       │   ├── 404.blade.php
+│       │   ├── 419.blade.php
+│       │   ├── 429.blade.php
+│       │   ├── 500.blade.php
+│       │   ├── 503.blade.php
+│       │   ├── layout.blade.php
+│       │   └── minimal.blade.php
+│       ├── jury/
+│       │   └── reports/
+│       │       └── index.blade.php
+│       ├── layouts/
+│       │   ├── app.blade.php
+│       │   ├── guest.blade.php
+│       │   └── navigation.blade.php
+│       ├── profile/
+│       │   ├── partials/
+│       │   │   ├── delete-user-form.blade.php
+│       │   │   ├── update-password-form.blade.php
+│       │   │   └── update-profile-information-form.blade.php
+│       │   └── edit.blade.php
+│       ├── student/
+│       │   ├── reports/
+│       │   │   └── create.blade.php
+│       │   └── dashboard.blade.php
+│       ├── teacher/
+│       │   └── reports/
+│       │       └── index.blade.php
+│       ├── vendor/
+│       │   ├── mail/
+│       │   │   ├── html/
+│       │   │   │   ├── themes/
+│       │   │   │   │   └── default.css
+│       │   │   │   ├── button.blade.php
+│       │   │   │   ├── footer.blade.php
+│       │   │   │   ├── header.blade.php
+│       │   │   │   ├── layout.blade.php
+│       │   │   │   ├── message.blade.php
+│       │   │   │   ├── panel.blade.php
+│       │   │   │   ├── subcopy.blade.php
+│       │   │   │   └── table.blade.php
+│       │   │   └── text/
+│       │   │       ├── button.blade.php
+│       │   │       ├── footer.blade.php
+│       │   │       ├── header.blade.php
+│       │   │       ├── layout.blade.php
+│       │   │       ├── message.blade.php
+│       │   │       ├── panel.blade.php
+│       │   │       ├── subcopy.blade.php
+│       │   │       └── table.blade.php
+│       │   ├── notifications/
+│       │   │   └── email.blade.php
+│       │   └── pagination/
+│       │       ├── bootstrap-4.blade.php
+│       │       ├── bootstrap-5.blade.php
+│       │       ├── default.blade.php
+│       │       ├── semantic-ui.blade.php
+│       │       ├── simple-bootstrap-4.blade.php
+│       │       ├── simple-bootstrap-5.blade.php
+│       │       ├── simple-default.blade.php
+│       │       ├── simple-tailwind.blade.php
+│       │       └── tailwind.blade.php
+│       ├── dashboard.blade.php
+│       └── welcome.blade.php
+├── routes/
+│   ├── auth.php
+│   ├── console.php
+│   └── web.php
+├── storage/
+│   ├── app/
+│   │   ├── private/
+│   │   │   └── .gitignore
+│   │   ├── public/
+│   │   │   └── .gitignore
+│   │   └── .gitignore
+│   ├── framework/
+│   │   ├── cache/
+│   │   │   ├── data/
+│   │   │   │   └── .gitignore
+│   │   │   └── .gitignore
+│   │   ├── sessions/
+│   │   │   └── .gitignore
+│   │   ├── testing/
+│   │   │   └── .gitignore
+│   │   ├── views/
+│   │   │   └── .gitignore
+│   │   └── .gitignore
+│   └── logs/
+│       └── .gitignore
+├── tests/
+│   ├── Feature/
+│   │   ├── Auth/
+│   │   │   ├── AuthenticationTest.php
+│   │   │   ├── EmailVerificationTest.php
+│   │   │   ├── PasswordConfirmationTest.php
+│   │   │   ├── PasswordResetTest.php
+│   │   │   ├── PasswordUpdateTest.php
+│   │   │   └── RegistrationTest.php
+│   │   ├── ExampleTest.php
+│   │   └── ProfileTest.php
+│   ├── Unit/
+│   │   └── ExampleTest.php
+│   └── TestCase.php
+├── .editorconfig
+├── .env.example
+├── .gitattributes
+├── .gitignore
+├── artisan
+├── assignRole('student')
+├── composer.json
+├── composer.lock
+├── first()
+├── fresh(['student'
+├── index.php
+├── package.json
+├── phpunit.xml
+├── postcss.config.js
+├── README_.md
+├── README.md
+├── sail
+├── tailwind.config.js
+└── vite.config.js
+
+
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
