@@ -193,7 +193,7 @@
 
 
                     <!-- SUPER ADMIN -->
-                @elseif (auth()->user()->hasRole('superAdmin'))
+                @elseif (auth()->user()->hasRole('superadmin'))
                     @php
                         $usersCount = \App\Models\User::count();
                         $reportsCount = \App\Models\Report::count();

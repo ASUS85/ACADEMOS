@@ -101,7 +101,7 @@ class ReportController extends Controller
     public function adminUsers()
     {
         $users = \App\Models\User::with('roles')->paginate(15);
-        return view('admin.users', compact('users'));
+        return view('admin.teachers.index', compact('users'));
     }
 
     public function adminStats()

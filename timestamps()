@@ -1,0 +1,4 @@
+input: [
+    'resources/js/app.js',
+    'resources/js/teachers.js'
+]

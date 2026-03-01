@@ -14,45 +14,37 @@
 
                 <div class="card border-0 shadow-lg">
                     <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-dark">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <th>ID</th>
                                     <th>Nom</th>
                                     <th>Email</th>
-                                    <th>Rôles</th>
-                                    <th>Créé</th>
+                                    <th>Rôle</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($users as $user)
+                                @foreach ($users as $user)
                                     <tr>
-                                        <td>{{ $user->id }}</td>
                                         <td>{{ $user->name }}</td>
                                         <td>{{ $user->email }}</td>
+                                        <td>{{ $user->roles->pluck('name')->join(', ') }}</td>
                                         <td>
-                                            @foreach ($user->roles as $role)
-                                                <span
-                                                    class="badge bg-{{ $role->name == 'superAdmin' ? 'danger' : 'primary' }}">
-                                                    {{ $role->name }}
-                                                </span>
-                                            @endforeach
-                                        </td>
-                                        <td>{{ $user->created_at->format('d/m/Y') }}</td>
-                                        <td>
-                                            <a href="#" class="btn btn-sm btn-outline-primary">Éditer</a>
+                                            <a href="{{ route('superadmin.users.edit', $user) }}">Éditer</a>
+                                            <form action="{{ route('superadmin.users.destroy', $user) }}" method="POST"
+                                                style="display:inline;">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button
+                                                    onclick="return confirm('Supprimer cet utilisateur ?')">Supprimer</button>
+                                            </form>
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center p-5">Aucun utilisateur</td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
+                        {{ $users->links() }}
                     </div>
-                    {{ $users->links() }}
                 </div>
             </div>
         </div>

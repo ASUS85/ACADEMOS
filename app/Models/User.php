@@ -27,7 +27,9 @@ class User extends Authenticatable
         'password',
         'matricule',
         'grade',
-        'specialite'
+        'department_id',
+        'specialite',
+        'sexe'
     ];
 
     /**
@@ -83,5 +85,10 @@ class User extends Authenticatable
     public function filieres()
     {
         return $this->belongsToMany(Filiere::class, 'teacher_filiere');
+    }
+
+    public function createdTeachers()
+    {
+        return $this->hasMany(User::class, 'created_by');
     }
 }

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Admin\AdminController;
+use App\Models\Filiere;
 
 Route::get('/', function () {
     return view('welcome');
@@ -31,23 +32,30 @@ Route::middleware('auth')->group(function () {
     // SUPERADMIN (avec middleware role)
     Route::prefix('superadmin')
         ->name('superadmin.')
-        ->middleware('role:admin|superadmin')
+        ->middleware('role:superadmin')
         ->group(function () {
             Route::get('/users', [AdminController::class, 'superadminUsers'])->name('users');
             Route::get('/reports', [AdminController::class, 'superadminReports'])->name('reports');
+            Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
+            Route::patch('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+            Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
             Route::get('/system', [AdminController::class, 'systemConfig'])->name('system');
             Route::get('/stats', [AdminController::class, 'superadminStats'])->name('stats');
             Route::resource('admins', AdminController::class);
         });
 
     // ADMIN (avec middleware role)
-    Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/reports', [ReportController::class, 'adminIndex'])->name('reports.index');
-        Route::get('/users', [ReportController::class, 'adminUsers'])->name('users.index');
-        Route::get('/stats', [ReportController::class, 'adminStats'])->name('stats.index');
-        Route::get('/teachers/create', [TeacherController::class, 'create'])->name('teachers.create');
-        Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
-    });
+    Route::prefix('admin')
+        ->name('admin.')
+        ->middleware(['role:admin'])
+        ->group(function () {
+            Route::get('/reports', [ReportController::class, 'adminIndex'])->name('reports.index');
+            Route::get('/users', [ReportController::class, 'adminUsers'])->name('users.index');
+            Route::get('/stats', [ReportController::class, 'adminStats'])->name('stats.index');
+            Route::get('/teachers/create', [TeacherController::class, 'create'])->name('teachers.create');
+            Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
+            Route::resource('teachers', TeacherController::class);
+        });
 
 
 
