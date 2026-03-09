@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
+use App\Models\Department;
+use App\Models\Filiere;
 
 class RegisteredUserController extends Controller
 {
@@ -19,7 +21,9 @@ class RegisteredUserController extends Controller
      */
     public function create(): View
     {
-        return view('auth.register');
+        $departments = Department::all();
+
+       return view('auth.register', compact('departments'));
     }
 
     /**
@@ -30,10 +34,12 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
-            'matricule' => ['required', 'string', 'max:50', 'unique:users'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'name' => ['required','string','max:255'],
+            'email' => ['required','string','email','max:255','unique:users'],
+            'matricule' => ['required','string','max:50','unique:users'],
+            'department_id' => ['required','exists:departments,id'],
+            'filiere_id' => ['required','exists:filieres,id'],
+            'password' => ['required','confirmed', Rules\Password::defaults()],
         ]);
 
         // Récupérer filiere
@@ -45,8 +51,8 @@ class RegisteredUserController extends Controller
             'email' => $request->email,
             'matricule' => $request->matricule,
             'password' => Hash::make($request->password),
-            'filiere_id' => $filiere->id,
-            'department_id' => $filiere->department_id
+            'department_id' => $request->department_id,
+            'specialite' => $filiere->id
         ]);
 
         //  ASSIGNE RÔLE ÉTUDIANT AUTOMATIQUEMENT

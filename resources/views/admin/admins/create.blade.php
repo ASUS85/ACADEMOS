@@ -5,12 +5,10 @@
         <div class="card shadow border-0">
             <div class="card-body p-5">
 
-                <h3 class="mb-4">👨‍🏫 Ajouter Enseignant</h3>
+                <h3 class="mb-4">➕ Ajouter un Admin</h3>
 
-                <form action="{{ route('admin.teachers.store') }}" method="POST">
+                <form action="{{ route('superadmin.admins.store') }}" method="POST">
                     @csrf
-
-                    <input type="hidden" name="department_id" value="{{ auth()->user()->department_id }}">
 
                     <div class="row">
 
@@ -25,34 +23,35 @@
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label>Matricule</label>
-                            <input name="matricule" class="form-control" required>
+                            <label>Mot de passe</label>
+                            <input name="password" type="password" class="form-control" required>
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label>Grade</label>
-                            <input name="grade" class="form-control" required>
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label>Sexe</label>
-                            <select name="sexe" class="form-control">
-                                <option value="M">Masculin</option>
-                                <option value="F">Féminin</option>
-                            </select>
+                            <label>Confirmer mot de passe</label>
+                            <input name="password_confirmation" type="password" class="form-control" required>
                         </div>
 
                         <div class="col-md-12 mb-3">
-                            <label>Spécialité / Filière</label>
-                            <select id="filiere" name="specialite" class="form-control">
-                                <option value="">Sélectionner spécialité</option>
+                            <label>Département</label>
+
+                            <select name="department_id" class="form-control" required>
+                                <option value="">Choisir département</option>
+
+                                @foreach ($departments as $department)
+                                    <option value="{{ $department->id }}">
+                                        {{ $department->name }}
+                                    </option>
+                                @endforeach
+
                             </select>
+
                         </div>
 
                     </div>
 
                     <button class="btn btn-primary">
-                        Enregistrer
+                        Créer Admin
                     </button>
 
                 </form>
@@ -61,25 +60,5 @@
         </div>
 
     </div>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-
-            let departmentId = "{{ auth()->user()->department_id }}";
-
-            fetch('/api/filieres/' + departmentId)
-                .then(res => res.json())
-                .then(data => {
-
-                    let select = document.getElementById('filiere');
-
-                    data.forEach(f => {
-                        select.innerHTML += `<option value="${f.id}">${f.name}</option>`;
-                    });
-
-                });
-
-        });
-    </script>
 
 </x-app-layout>

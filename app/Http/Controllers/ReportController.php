@@ -42,6 +42,11 @@ class ReportController extends Controller
         $reports = Report::with('student')->latest()->get();
         return view('admin.reports.index', compact('reports'));
     }
+    public function superadminReports()
+    {
+        $reports = Report::with('student')->latest()->get();
+        return view('admin.reports.index', compact('reports'));
+    }
 
     public function assign(Request $request, Report $report)
     {
@@ -105,6 +110,17 @@ class ReportController extends Controller
     }
 
     public function adminStats()
+    {
+        $stats = [
+            'total_reports' => \App\Models\Report::count(),
+            'total_users' => \App\Models\User::count(),
+            'students' => \App\Models\User::role('student')->count(),
+            'teachers' => \App\Models\User::role('teacher')->count(),
+            'juries' => \App\Models\User::role('jury')->count(),
+        ];
+        return view('admin.stats', compact('stats'));
+    }
+    public function superadminStats()
     {
         $stats = [
             'total_reports' => \App\Models\Report::count(),

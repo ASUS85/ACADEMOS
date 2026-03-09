@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\Report;
 use App\Models\Department;
+use App\Models\Filiere;
 use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
@@ -63,9 +64,10 @@ class AdminController extends Controller
     {
         $user->load('department', 'roles');
         $departments = Department::all();
+        $filieres = Filiere::all();
         $roles = ['superadmin', 'admin', 'teacher', 'student', 'jury'];
 
-        return view('admin.superadmin.edit-user', compact('user', 'departments', 'roles'));
+        return view('admin.superadmin.edit-user', compact('user', 'departments', 'roles', 'filieres'));
     }
 
     // Mettre à jour un utilisateur
@@ -74,13 +76,17 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
+            'matricule' => 'nullable|string|max:50',
+            'specialite' => 'nullable|string',
             'department_id' => 'nullable|exists:departments,id',
-            'role' => 'nullable|string', // pour changer le rôle
+            'role' => 'nullable|string',
         ]);
 
         $user->update([
             'name' => $request->name,
             'email' => $request->email,
+            'matricule' => $request->matricule,
+            'specialite' => $request->specialite,
             'department_id' => $request->department_id,
         ]);
 
@@ -113,16 +119,6 @@ class AdminController extends Controller
     }
 
     // Autres méthodes existantes
-    public function storeAdmin(Request $request)
-    {
-        $admin = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make('password123'),
-            'department_id' => $request->department_id
-        ]);
-        $admin->assignRole('admin');
-    }
 
     public function storeTeacher(Request $request)
     {
@@ -139,5 +135,38 @@ class AdminController extends Controller
     public function systemConfig()
     {
         return view('admin.superadmin.system');
+    }
+
+    public function AdmineditUsers(Request $request)
+    {
+        $adminDepartment = auth()->user()->department_id;
+
+        $users = User::query();
+
+        //  Limiter au département de l'admin
+        $users->where('department_id', $adminDepartment);
+
+        // Ne montrer que students + teachers
+        $users->whereHas('roles', function ($q) {
+            $q->whereIn('name', ['student', 'teacher']);
+        });
+
+        //  Filtre role
+        if ($request->role) {
+            $users->whereHas('roles', function ($q) use ($request) {
+                $q->where('name', $request->role);
+            });
+        }
+
+        //  Filtre spécialité
+        if ($request->specialite) {
+            $users->where('specialite', $request->specialite);
+        }
+
+        $users = $users->with(['roles','department','filiere'])->paginate(10);
+
+        $filieres = \App\Models\Filiere::where('department_id', $adminDepartment)->get();
+
+        return view('admin.admins.listUsers', compact('users', 'filieres'));
     }
 }

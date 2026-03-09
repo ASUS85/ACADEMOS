@@ -14,12 +14,12 @@
 
     <style>
         body { font-family: 'Poppins', sans-serif; }
-        .login-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        /* .login-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); } */
     </style>
 </head>
 
 <body class="min-vh-100 d-flex align-items-center login-bg">
-    <div class="container">
+    <div class="container-fluid">
         <div class="row justify-content-center">
             <div class="col-lg-5 col-md-7 col-sm-9">
                 <!-- Logo + Titre -->

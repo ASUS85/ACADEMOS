@@ -247,18 +247,7 @@
                     <!-- Actions Super Admin -->
                     <div class="row g-4 mb-5">
 
-                        <div class="col-md-3">
-                            <a href="{{ url('/superadmin/admins') }}"
-                                class="card border-0 shadow h-100 text-decoration-none">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-user-shield fa-3x text-danger mb-3"></i>
-                                    <h5 class="fw-bold">👑 Gérer Admins</h5>
-                                    <small class="text-muted">Créer / Supprimer</small>
-                                </div>
-                            </a>
-                        </div>
-
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <a href="{{ url('/superadmin/users') }}"
                                 class="card border-0 shadow h-100 text-decoration-none">
                                 <div class="card-body text-center">
@@ -268,7 +257,7 @@
                             </a>
                         </div>
 
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <a href="{{ url('/superadmin/reports') }}"
                                 class="card border-0 shadow h-100 text-decoration-none">
                                 <div class="card-body text-center">
@@ -278,7 +267,7 @@
                             </a>
                         </div>
 
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <a href="{{ url('/superadmin/stats') }}"
                                 class="card border-0 shadow h-100 text-decoration-none">
                                 <div class="card-body text-center">

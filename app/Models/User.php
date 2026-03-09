@@ -79,7 +79,7 @@ class User extends Authenticatable
 
     public function filiere()
     {
-        return $this->belongsTo(Filiere::class);
+        return $this->belongsTo(Filiere::class, 'specialite');
     }
 
     public function filieres()

@@ -50,7 +50,12 @@
 
     <div class="row">
         <div class="col-12">
-            <a href="{{ route('admin.reports') }}" class="btn btn-primary btn-lg">
+            @php
+                $backRoute = auth()->user()->hasRole('superadmin')
+                    ? route('superadmin.reports')
+                    : route('admin.reports.index');
+            @endphp
+            <a href="{{ $backRoute }}" class="btn btn-primary btn-lg">
                 <i class="fas fa-arrow-left me-2"></i>Retour Rapports
             </a>
         </div>

@@ -77,11 +77,11 @@
                                         <!-- Étudiant -->
                                         <td>
                                             <div class="d-flex align-items-center">
-                                                <img src="https://ui-avatars.com/api/?name={{ $report->student->name }}&background=28a745&color=fff&size=40&rounded=true"
+                                                <img src="https://ui-avatars.com/api/?name={{ $report->student?->name ?? 'Student' }}&background=28a745&color=fff&size=40&rounded=true"
                                                     class="rounded-circle me-3" width="40" height="40">
                                                 <div>
-                                                    <div class="fw-bold">{{ $report->student->name }}</div>
-                                                    <small class="text-muted">{{ $report->student->email }}</small>
+                                                    <div class="fw-bold">{{ $report?->student?->name }}</div>
+                                                    <small class="text-muted">{{ $report?->student?->email }}</small>
                                                 </div>
                                             </div>
                                         </td>
@@ -92,7 +92,7 @@
                                             @if ($report->file_path)
                                                 <br><small>
                                                     <i class="fas fa-file-pdf text-danger me-1"></i>
-                                                    <a href="{{ asset('storage/' . $report->file_path) }}"
+                                                    <a href="{{ asset('storage/' . $report?->file_path) }}"
                                                         target="_blank" class="text-decoration-none">PDF</a>
                                                 </small>
                                             @endif
@@ -113,23 +113,23 @@
                                         <!-- Date -->
                                         <td>
                                             <span class="badge bg-light text-dark px-2 py-1">
-                                                {{ $report->created_at->format('d/m/Y') }}
+                                                {{ $report?->created_at->format('d/m/Y') }}
                                             </span>
                                             <br><small class="text-muted">
-                                                {{ $report->created_at->diffForHumans() }}
+                                                {{ $report?->created_at->diffForHumans() }}
                                             </small>
                                         </td>
 
                                         <!-- Commentaire Enseignant -->
                                         <td>
-                                            @if ($report->teacher_status === 'Validé par enseignant')
+                                            @if ($report?->teacher_status === 'Validé par enseignant')
                                                 <div
                                                     class="bg-info bg-opacity-10 p-3 rounded border-start border-info border-3">
                                                     <div class="small text-dark mb-1">
-                                                        "{{ Str::limit($report->teacher_comment, 80) }}"
+                                                        "{{ Str::limit($report?->teacher_comment, 80) }}"
                                                     </div>
                                                     <div class="badge bg-info text-dark">
-                                                        {{ $report->teacher->name ?? 'Enseignant' }}
+                                                        {{ $report?->teacher?->name ?? 'Enseignant' }}
                                                     </div>
                                                 </div>
                                             @else
@@ -140,9 +140,9 @@
 
                                         <!-- Affectation-->
                                         <td class="text-center">
-                                            @if ($report->status === 'Soumis' && !$report->teacher_id)
+                                            @if ($report->status === 'Soumis' && !$report?->teacher_id)
                                                 <form method="POST"
-                                                    action="{{ url('/reports/' . $report->id . '/assign') }}"
+                                                    action="{{ url('/reports/' . $report?->id . '/assign') }}"
                                                     class="d-inline">
                                                     @csrf
                                                     <div class="input-group input-group-sm mb-2">

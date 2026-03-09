@@ -1,5 +1,5 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm border-bottom">
-    <div class="container">
+    <div class="container-fluid">
         <!-- Logo -->
         <a class="navbar-brand fw-bold fs-4" href="{{ route('dashboard') }}">
             <i class="fas fa-graduation-cap me-2 text-primary"></i>
@@ -15,20 +15,24 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                    <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                        href="{{ route('dashboard') }}">
                         <i class="fas fa-tachometer-alt me-1"></i> Dashboard
                     </a>
                 </li>
 
-                @if(auth()->user()->hasRole('admin'))
+                @if (auth()->user()->hasRole('admin'))
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-cog me-1"></i> Admin
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/admin/reports"><i class="fas fa-file-alt me-2"></i>Tous les rapports</a></li>
-                            <li><a class="dropdown-item" href="/admin/users"><i class="fas fa-users me-2"></i>Utilisateurs</a></li>
-                            <li><a class="dropdown-item" href="/admin/stats"><i class="fas fa-chart-bar me-2"></i>Stats</a></li>
+                            <li><a class="dropdown-item" href="/admin/reports"><i class="fas fa-file-alt me-2"></i>Tous
+                                    les rapports</a></li>
+                            <li><a class="dropdown-item" href="/admin/users"><i
+                                        class="fas fa-users me-2"></i>Utilisateurs</a></li>
+                            <li><a class="dropdown-item" href="/admin/stats"><i
+                                        class="fas fa-chart-bar me-2"></i>Stats</a></li>
                         </ul>
                     </li>
                 @endif
@@ -37,9 +41,10 @@
             <!-- Profil Dropdown -->
             <ul class="navbar-nav ms-3">
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button"
+                        data-bs-toggle="dropdown">
                         <img src="https://ui-avatars.com/api/?name={{ auth()->user()->name }}&background=007bff&color=fff&size=32&rounded=true"
-                             class="rounded-circle me-2" width="32" height="32" alt="">
+                            class="rounded-circle me-2" width="32" height="32" alt="">
                         <span class="d-none d-md-inline">{{ Str::limit(auth()->user()->name, 20) }}</span>
                         <i class="fas fa-chevron-down ms-1"></i>
                     </a>
@@ -50,14 +55,18 @@
                                 {{ auth()->user()->name }}
                             </h6>
                         </li>
-                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
                         <li>
                             <span class="dropdown-item-text text-success px-3 py-2">
                                 <i class="fas fa-mask me-2"></i>
                                 {{ auth()->user()->roles->first()->name ?? 'Aucun rôle' }}
                             </span>
                         </li>
-                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
                         <li>
                             <form method="POST" action="{{ route('logout') }}" class="d-inline">
                                 @csrf

@@ -31,7 +31,8 @@
                         </div>
                         <div class="col-md-6">
                             <label>Département</label>
-                            <input type="text" class="form-control" disabled value="{{ $department->name }}">
+                           <input type="text" class="form-control" disabled value="{{ $department->name }}">
+                        <input type="hidden" name="department_id" value="{{ $department->id }}">
                         </div>
                         <div class="col-md-12">
                             <label>Spécialité / Filière</label>
