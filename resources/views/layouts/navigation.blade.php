@@ -1,52 +1,34 @@
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm border-bottom">
-    <div class="container-fluid">
-        <!-- Logo -->
-        <a class="navbar-brand fw-bold fs-4" href="{{ route('dashboard') }}">
-            <i class="fas fa-graduation-cap me-2 text-primary"></i>
-            ACADEMOS
-        </a>
-
-        <!-- Toggle mobile -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm border-bottom p-0 topbar">
+    <div class="container-fluid p-0" style="max-height: 60px;">
         <!-- Menu Desktop -->
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
+            <!-- Logo -->
+            <a href="{{ route('dashboard') }}">
+                <img src="{{ asset('images/academo.svg') }}" alt="Logo Academos" width="250">
+            </a>
+            <ul class="navbar-nav  me-auto" style="margin-left: 33% !important;">
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                    <a class="nav-link fw-bold {{ request()->routeIs('dashboard') ? 'active' : '' }}"
                         href="{{ route('dashboard') }}">
-                        <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                        Bienvenu <span class="text-success" >sur</span> ACADEMOS
                     </a>
                 </li>
-
-                @if (auth()->user()->hasRole('admin'))
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-cog me-1"></i> Admin
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/admin/reports"><i class="fas fa-file-alt me-2"></i>Tous
-                                    les rapports</a></li>
-                            <li><a class="dropdown-item" href="/admin/users"><i
-                                        class="fas fa-users me-2"></i>Utilisateurs</a></li>
-                            <li><a class="dropdown-item" href="/admin/stats"><i
-                                        class="fas fa-chart-bar me-2"></i>Stats</a></li>
-                        </ul>
-                    </li>
-                @endif
             </ul>
 
             <!-- Profil Dropdown -->
-            <ul class="navbar-nav ms-3">
+            <ul class="navbar-nav">
+                <li class="">
+                    <a class="nav-link d-flex align-items-center text-warning" href="#" role="button">
+                        <i class="fa fa-bell"></i>
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav  ms-1 me-4">
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button"
+                    <a class="nav-link d-flex align-items-center" href="#" role="button"
                         data-bs-toggle="dropdown">
                         <img src="https://ui-avatars.com/api/?name={{ auth()->user()->name }}&background=007bff&color=fff&size=32&rounded=true"
                             class="rounded-circle me-2" width="32" height="32" alt="">
-                        <span class="d-none d-md-inline">{{ Str::limit(auth()->user()->name, 20) }}</span>
-                        <i class="fas fa-chevron-down ms-1"></i>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>

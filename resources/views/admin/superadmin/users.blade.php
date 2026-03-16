@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="container py-5">
+    <div class="container-fluid py-5">
         <div class="row justify-content-center">
             <div class="col-lg-12">
                 <div class="d-flex justify-content-between align-items-center mb-5">

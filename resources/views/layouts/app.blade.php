@@ -14,44 +14,132 @@
 
     <!-- Google Fonts (optionnel) -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/bootstrap.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
     <style>
         body {
             font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
         }
 
         .sidebar {
-            width: 70px;
+            width: 75px;
             min-height: 100vh;
-            background: #0d6efd;
-            transition: width 0.3s;
+            background: linear-gradient(to bottom, #0c337c, #1b75eb);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: fixed;
+            top: 60px;
+            left: 0;
+            z-index: 2000;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
 
         .sidebar.expanded {
             width: 200px;
         }
 
+        /* Style du bouton Toggle */
+        #toggleSidebar {
+            cursor: pointer;
+            padding: 10px 0;
+            transition: background 0.3s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #toggleSidebar:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #toggleSidebar i {
+            font-size: 1.5rem;
+            transition: transform 0.5s ease;
+            /* Animation de rotation */
+        }
+
+        /* Rotation de l'icône quand le menu est ouvert */
+        .sidebar.expanded #toggleSidebar i {
+            transform: rotate(180deg);
+        }
+
         .sidebar a {
-            color: white;
+            color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             display: flex;
             align-items: center;
-            padding: 12px;
+            padding: 15px;
+            margin-bottom: 30px;
+            transition: all 0.2s;
+            white-space: nowrap;
+            /* Évite que le texte saute à la ligne */
+        }
+
+        .sidebar a:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
+            padding-left: 20px;
+            /* Petit effet de glissement au survol */
         }
 
         .sidebar a i {
-            font-size: 20px;
+            font-size: 18px;
             min-width: 40px;
             text-align: center;
         }
 
         .sidebar .menu-text {
-            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
         }
 
         .sidebar.expanded .menu-text {
-            display: inline;
+            opacity: 1;
+            pointer-events: auto;
+            margin-left: 10px;
         }
 
+        .content-area {
+            margin-top: 0px;
+            margin-left: 40px;
+            padding: 30px;
+            transition: margin-left 0.3s;
+        }
+
+        .sidebar.expanded~.content-area {
+            margin-left: 220px;
+            margin-top: 0px;
+        }
+
+        .mt-auto-custom {
+            margin-top: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 70px;
+            /* Pour éviter que ce soit collé au bord si la sidebar est longue */
+        }
+
+        /* Style spécifique pour le bouton logout (bouton transparent qui ressemble aux liens) */
+        .logout-btn {
+            background: none;
+            border: none;
+            width: 100%;
+            color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .logout-btn:hover {
+            color: #ff4d4d;
+            /* Rouge clair au survol */
+            background: rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
 
@@ -70,46 +158,122 @@
     </nav> --}}
     @include('layouts.navigation')
 
-    <div class="d-flex">
+    <!-- SIDEBAR -->
 
-        <!-- SIDEBAR -->
-        <div class="sidebar" id="sidebar">
+    <div class="sidebar" id="sidebar">
 
-            <button id="toggleSidebar" class="btn bg-primary btn-light me-3 w-100 text-light d-flex justify-content-between">
-                <i class="fa fa-list"></i>
-                <span class="menu-text">List</span>
-            </button>
-
-            <a href="/dashboard">
-                <i class="fa fa-house"></i>
-                <span class="menu-text">Dashboard</span>
-            </a>
-
-            <a href="/reports">
-                <i class="fa fa-file"></i>
-                <span class="menu-text">Rapports</span>
-            </a>
-
-            <a href="/students">
-                <i class="fa fa-user-graduate"></i>
-                <span class="menu-text">Étudiants</span>
-            </a>
-
-            <a href="/teachers">
-                <i class="fa fa-chalkboard-teacher"></i>
-                <span class="menu-text">Enseignants</span>
-            </a>
-
-            <a href="/profile">
-                <i class="fa fa-user"></i>
-                <span class="menu-text">Profil</span>
-            </a>
-
+        <div id="toggleSidebar" class="mb-4 text-light d-flex justify-content-center align-items-center">
+            <i class="bi bi-list"></i>
         </div>
 
+        <a href="/dashboard">
+            <i class="fa fa-house"></i>
+            <span class="menu-text">Dashboard</span>
+        </a>
+
+        @switch(Auth::user()->role)
+            @case('admin')
+                {{-- <a href="/students">
+                    <i class="fa fa-user-graduate"></i>
+                    <span class="menu-text">Étudiants</span>
+                </a>
+                <a href="/teachers">
+                    <i class="fa fa-chalkboard-teacher"></i>
+                    <span class="menu-text">Enseignants</span>
+                </a> --}}
+                <a href="{{ url('/admin/users') }}">
+                    <i class="fa fa-users"></i>
+                    <span class="menu-text">Utilisateurs</span>
+                </a>
+            @break
+
+            @case('teacher')
+                <a href="/reports">
+                    <i class="fa fa-file"></i>
+                    <span class="menu-text">Rapports</span>
+                </a>
+            @break
+
+            @case('student')
+                <a href="/reports">
+                    <i class="fa fa-file"></i>
+                    <span class="menu-text">Mes Rapports</span>
+                </a>
+            @break
+
+            @case('superadmin')
+                <a href="/reports">
+                    <i class="fa fa-file"></i>
+                    <span class="menu-text">Rapports</span>
+                </a>
+
+                {{-- <a href="/students">
+                    <i class="fa fa-user-graduate"></i>
+                    <span class="menu-text">Étudiants</span>
+                </a>
+
+                <a href="/teachers">
+                    <i class="fa fa-chalkboard-teacher"></i>
+                    <span class="menu-text">Enseignants</span>
+                </a> --}}
+
+                <a href="/profile">
+                    <i class="fa fa-user"></i>
+                    <span class="menu-text">Profil</span>
+                </a>
+                <a href="/profile">
+                    <i class="fa fa-users"></i>
+                    <span class="menu-text">Profil</span>
+                </a>
+                <a href="/profile">
+                    <i class="fa fa-gear"></i>
+                    <span class="menu-text">Profil</span>
+                </a>
+            @break
+
+            @default
+                <span class="menu-text">Aucun menu disponible</span>
+        @endswitch
+
+        <a href="/profile">
+            <i class="fa fa-user"></i>
+            <span class="menu-text">Profil</span>
+        </a>
+
+        <div class="mt-auto-custom">
+            <button type="button" class="logout-btn" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                <i class="fa fa-right-from-bracket text-danger"></i>
+                <span class="menu-text">Déconnexion</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="bi bi-exclamation-circle text-warning" style="font-size: 3rem;"></i>
+                    <p class="mt-3">Êtes-vous sûr de vouloir vous déconnecter ?</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-danger">Oui, me déconnecter</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
-        {{--  <div class="container-fluid min-vh-100 bg-light px-0">
+
+    {{--  <div class="container-fluid min-vh-100 bg-light px-0">
         @include('layouts.navigation')
 
         <!-- Page Heading -->
@@ -130,15 +294,9 @@
             </div>
         </main>
     </div> --}}
-        <!-- Page Content -->
-        <main class="container my-4">
-            <div class="row justify-content-center">
-                <div class="col-lg-10">
-                    {{ $slot }}
-                </div>
-            </div>
-        </main>
-
+    <!-- Page Content -->
+    <div class="content-area">
+        {{ $slot }}
     </div>
 
 

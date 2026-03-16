@@ -1,6 +1,6 @@
 <x-app-layout>
 
-    <div class="container py-5">
+    <div class="container-fluid py-5">
 
         <div class="d-flex justify-content-between mb-4">
             <h3>👨‍🏫 Utilisateurs du Département</h3>

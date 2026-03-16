@@ -1,6 +1,6 @@
 <x-app-layout>
 
-    <div class="container py-5">
+    <div class="container-fluid py-5">
 
         <div class="card shadow border-0">
             <div class="card-body p-5">
