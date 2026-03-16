@@ -2,75 +2,74 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\User;
+use App\Models\Department;
+use App\Models\Filiere;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class DemoUsersSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run()
     {
-        // SUPER ADMIN
+        // Nettoyage préalable des utilisateurs pour éviter les doublons si fresh n'est pas utilisé
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        User::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        $password = Hash::make('password123');
+
+        // 1. UNIQUE SUPER ADMIN
         $superAdmin = User::create([
-            'name' => 'Super Admin',
-            'email' => 'superadmin@ispcb.cm',
-            'password' => Hash::make('password123'),
+            'name'     => 'Super Admin',
+            'email'    => 'superadmin@ispcb.cm',
+            'password' => $password,
         ]);
         $superAdmin->assignRole('superadmin');
 
+        // Récupération des départements pour la répartition
+        $departments = Department::all();
 
+        foreach ($departments as $dept) {
 
-        // ADMINS
-        $admin1 = User::create([
-            'name' => 'Admin 1',
-            'email' => 'admin1@ispcb.cm',
-            'password' => Hash::make('password123'),
-        ]);
-        $admin1->assignRole('admin');
+            // 2. TROIS ADMINS PAR DÉPARTEMENT
+            for ($i = 1; $i <= 3; $i++) {
+                $admin = User::create([
+                    'name'          => "Admin $i " . $dept->name,
+                    'email'         => "admin{$i}.dept{$dept->id}@ispcb.cm",
+                    'password'      => $password,
+                    'department_id' => $dept->id,
+                ]);
+                $admin->assignRole('admin');
+            }
 
+            // 3. TROIS TEACHERS PAR DÉPARTEMENT
+            for ($i = 1; $i <= 3; $i++) {
+                $teacher = User::create([
+                    'name'          => "Enseignant $i " . $dept->name,
+                    'email'         => "teacher{$i}.dept{$dept->id}@ispcb.cm",
+                    'password'      => $password,
+                    'department_id' => $dept->id,
+                ]);
+                $teacher->assignRole('teacher');
+            }
 
-
-        $admin2 = User::create([
-            'name' => 'Admin 2',
-            'email' => 'admin2@ispcb.cm',
-            'password' => Hash::make('password123'),
-        ]);
-        $admin2->assignRole('admin');
-
-
-
-        // TEACHERS
-        $teacher1 = User::create([
-            'name' => 'Teacher 1',
-            'email' => 'teacher1@ispcb.cm',
-            'password' => Hash::make('password123'),
-        ]);
-        $teacher1->assignRole('teacher');
-
-
-
-        $teacher2 = User::create([
-            'name' => 'Teacher 2',
-            'email' => 'teacher2@ispcb.cm',
-            'password' => Hash::make('password123'),
-        ]);
-        $teacher2->assignRole('teacher');
-
-
-
-        // STUDENTS
-        for ($i = 1; $i <= 2; $i++) {
-            $student = User::create([
-                'name' => "Student $i",
-                'email' => "student$i@ispcb.cm",
-                'password' => Hash::make('password123'),
-            ]);
-
-            $student->assignRole('student');
+            // 4. TROIS ÉLÈVES PAR FILIÈRE (On boucle sur les filières du département)
+            $filieres = Filiere::where('department_id', $dept->id)->get();
+            foreach ($filieres as $filiere) {
+                for ($i = 1; $i <= 3; $i++) {
+                    $student = User::create([
+                        'name'          => "Etudiant $i " . $filiere->name,
+                        'email'         => "student{$i}.filiere{$filiere->id}@ispcb.cm",
+                        'password'      => $password,
+                        'department_id' => $dept->id,
+                        'filiere_id'    => $filiere->id,
+                        'matricule'     => "MAT-" . strtoupper(substr($filiere->name, 0, 3)) . "-$filiere->id-$i",
+                    ]);
+                    $student->assignRole('student');
+                }
+            }
         }
     }
 }
