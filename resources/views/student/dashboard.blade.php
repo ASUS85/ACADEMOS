@@ -1,192 +1,208 @@
 <x-app-layout>
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
+    <style>
+        .status-icon {
+            width: 40px;
+            height: 40px;
+            background: #19a55a;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drop-zone {
+            border: 2px dashed #2b7ca3;
+            border-radius: 10px;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .drop-zone:hover {
+            background: #f1f7fb;
+        }
+
+        .bg-wait {
+            background: #ecd3ad;
+            color: #856404;
+        }
+        .welcome-gradient {
+        background: linear-gradient(to left, #1083ee, #0660d4); /* Dégradé bleu de gauche à droite */
+        color: white; /* Texte en blanc pour le contraste */
+    }
+    </style>
+
+    <div class="container-fluid  p-4">
+        <div class="mb-4 welcome-gradient p-4 rounded-3 shadow-sm">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <h1 class="h3 mb-1 fw-bold">📋 Mes Rapports de Stage</h1>
-                    <p class="text-muted mb-0">{{ $reports->count() }} rapport(s) au total</p>
-                </div>
-                <a href="{{ url('/student/reports/create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Nouveau Rapport
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Messages -->
-    @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show border-start border-success border-5 mb-4" role="alert">
-        <i class="fas fa-check-circle me-2"></i>
-        <strong>✅ {{ session('success') }}</strong>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    @endif
-
-    @if($reports->count() === 0)
-        <div class="text-center py-8 bg-light rounded-3">
-            <i class="fas fa-file-plus fa-4x text-muted mb-4 opacity-75"></i>
-            <h4 class="text-muted mb-3">Aucun rapport soumis</h4>
-            <p class="lead text-muted mb-4">Commencez par soumettre votre premier rapport de stage.</p>
-            <a href="{{ url('/student/reports/create') }}" class="btn btn-primary btn-lg px-5">
-                <i class="fas fa-file-upload me-2"></i>Soumettre Rapport
-            </a>
-        </div>
-    @else
-        @foreach($reports as $report)
-        <div class="card shadow-lg border-0 mb-5 overflow-hidden">
-            <!-- Header Rapport -->
-            <div class="card-header bg-gradient-primary text-white p-4 position-relative">
-                <div class="row align-items-center">
-                    <div class="col-md-7">
-                        <h4 class="mb-2 fw-bold">{{ $report->title }}</h4>
-                        <div class="d-flex flex-wrap gap-2">
-                            <span class="badge bg-light text-dark fs-6 px-3 py-2">
-                                <i class="fas fa-circle me-1 text-success small"></i>
-                                {{ $report->status }}
-                            </span>
-                            <span class="badge bg-warning fs-6 px-3 py-2">
-                                {{ $report->latestVersion->version ?? 'v1' }}
-                            </span>
-                            @if($report->teacher)
-                            <span class="badge bg-info text-white fs-6 px-3 py-2">
-                                👨‍🏫 {{ $report->teacher->name }}
-                            </span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="col-md-5 text-md-end mt-2 mt-md-0">
-                        <div class="btn-group" role="group">
-                            <a href="{{ asset('storage/' . ($report->latestVersion->file_path ?? $report->file_path)) }}"
-                               class="btn btn-outline-light btn-sm px-3" target="_blank">
-                                <i class="fas fa-file-pdf me-1"></i>Version Actuelle
-                            </a>
-                            @if($report->jury_final_score)
-                            <button class="btn btn-success btn-sm px-3" data-bs-toggle="modal"
-                                    data-bs-target="#noteModal{{ $report->id }}">
-                                <i class="fas fa-award me-1"></i>{{ $report->jury_final_score }}/20
-                            </button>
-                            @endif
-                        </div>
-                    </div>
+                    @php
+                        $heure = date('H');
+                        $salutation = $heure >= 6 && $heure < 18 ? 'Bonjour' : 'Bonsoir';
+                    @endphp
+                    <h2 class="h5 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; color: white !important;">
+                        {{ $salutation }}, <span class="fw-normal">{{ Auth::user()->name }}</span> !
+                    </h2>
+                    <p class="mb-0 opacity-75 small">
+                        Ravi de vous revoir sur <strong>Academo</strong>. Voici l'état d'avancement de vos rapports.
+                    </p>
                 </div>
             </div>
-
-            <div class="card-body p-0">
-                <!-- Historique Versions -->
-                <div class="p-4 border-bottom bg-light">
-                    <h6 class="fw-bold text-primary mb-4">
-                        <i class="fas fa-history me-2"></i>📜 Historique des Versions
-                    </h6>
-                    <div class="row g-3">
-                        @forelse($report->versions->take(6) as $version)
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100 border-0 shadow-sm hover-shadow-lg">
-                                <div class="card-body py-3 px-4">
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <span class="badge bg-{{ $version->action === 'validé' ? 'success' : ($version->action === 'commenté' ? 'info' : 'warning') }}">
-                                            {{ $version->version }}
-                                        </span>
-                                        <small class="text-muted">{{ $version->created_at->diffForHumans() }}</small>
-                                    </div>
-                                    <div class="fw-bold mb-2">{{ ucfirst($version->action) }}</div>
-                                    <div class="text-muted small mb-3">{{ $version->user->name }}</div>
-                                    @if($version->comment)
-                                    <div class="small text-truncate mb-2" style="max-height: 40px; overflow: hidden;">
-                                        "{{ Str::limit($version->comment, 50) }}"
-                                    </div>
-                                    @endif
-                                    <a href="{{ asset('storage/' . $version->file_path) }}"
-                                       class="btn btn-sm btn-outline-primary w-100" target="_blank">
-                                        📥 Télécharger
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        @empty
-                        <div class="col-12">
-                            <div class="text-center py-4 text-muted">
-                                <i class="fas fa-clock fa-2x mb-3 opacity-50"></i>
-                                <p>Aucune version disponible</p>
-                            </div>
-                        </div>
-                        @endforelse
+        </div>
+        <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center p-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="status-icon shadow-sm">
+                        <i class="fa fa-check"></i>
+                    </div>
+                    <div>
+                        <strong class="d-block">Statut :
+                            @if ($latestReport)
+                                {{ $latestReport->status }}
+                            @else
+                                Aucun rapport soumis
+                            @endif
+                        </strong>
+                        <span class="badge rounded-pill bg-warning text-dark px-3 mt-1">
+                            {{ $latestReport->teacher->name ?? 'En attente d\'encadreur' }}
+                        </span>
                     </div>
                 </div>
 
-                <!-- Commentaire Enseignant -->
-                @if($report->teacher_comment)
-                <div class="p-5 bg-gradient-info bg-opacity-10 border-start border-info border-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-1 text-center">
-                            <i class="fas fa-comment-dots fa-2x text-info"></i>
-                        </div>
-                        <div class="col-md-11">
-                            <h6 class="fw-bold text-info mb-3">💬 Commentaire Enseignant</h6>
-                            <blockquote class="mb-0">
-                                <p class="lead">"{{ $report->teacher_comment }}"</p>
-                            </blockquote>
-                            <small class="text-muted">
-                                <i class="fas fa-user-tie me-1"></i>
-                                {{ $report->teacher->name ?? 'Enseignant' }}
-                                • {{ $report->updated_at->format('d/m/Y H:i') }}
-                            </small>
-                        </div>
-                    </div>
-                </div>
+                @if ($latestReport && $latestReport->teacher_comment)
+                    <button class="btn btn-outline-secondary mt-3 mt-md-0 rounded-3 px-4" data-bs-toggle="collapse"
+                        data-bs-target="#collapseComment">
+                        <i class="fa fa-comment me-2"></i> Voir les commentaires
+                    </button>
                 @endif
+            </div>
+        </div>
 
-                <!-- Action: Corriger -->
-                @if(in_array($report->status, ['En attente étudiant', 'À corriger']))
-                <div class="p-5 bg-warning bg-opacity-10 border-0">
-                    <div class="alert alert-warning border-0 shadow-sm">
-                        <h5 class="alert-heading fw-bold mb-4">
-                            <i class="fas fa-edit me-2 text-warning"></i>
-                            📝 Version à corriger
-                        </h5>
-                        <form method="POST" action="{{ url('/student/reports/' . $report->id . '/resubmit') }}"
-                              enctype="multipart/form-data" class="row g-4 align-items-end">
+        @if ($latestReport && $latestReport->teacher_comment)
+            <div class="collapse mb-4" id="collapseComment">
+                <div class="alert alert-info border-0 shadow-sm mb-0">
+                    <strong>Dernier commentaire de l'encadreur :</strong><br>
+                    "{{ $latestReport->teacher_comment }}"
+                </div>
+            </div>
+        @endif
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-body p-4">
+                        <h3 class="h6 fw-bold m-2 p-3 shadow-sm rounded-3">Soumettre mon rapport</h3>
+
+                        <form action="{{ route('student.reports.store') }}" method="POST"
+                            enctype="multipart/form-data">
                             @csrf
-                            <div class="col-lg-8">
-                                <label class="form-label fw-bold fs-5 mb-3 text-warning">
-                                    📤 Nouvelle version corrigée (PDF uniquement)
-                                </label>
-                                <input type="file" name="file" class="form-control form-control-lg"
-                                       accept=".pdf,.docx" required>
-                                <div class="form-text">Max 10Mo - Corrigez selon les commentaires de l'enseignant</div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Titre du rapport</label>
+                                <input type="text" name="title" class="form-control"
+                                    placeholder="Ex: Rapport de stage - Fin d'étude" required>
                             </div>
-                            <div class="col-lg-4">
-                                <button type="submit" class="btn btn-warning btn-lg w-100 py-3 fw-bold shadow-lg">
-                                    <i class="fas fa-upload me-2"></i>
-                                    🚀 Envoyer Correction
-                                </button>
+
+                            <div class="d-flex align-items-center justify-content-center drop-zone p-5 text-center mb-3"
+                                id="dropZone"
+                                style="
+    height: 300px;>
+
+                                <p class="text-muted mb-0"
+                                id="fileNameDisplay"> <i class="fa fa-file-arrow-up fa-2x text-primary mb-2"></i>
+                                Glisser un fichier ou cliquer pour
+                                sélectionner</p>
+                                <input type="file" name="file" id="fileInput" hidden accept=".pdf">
                             </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"
+                                style="background: #1e7ca6;">
+                                SOUMETTRE MON RAPPORT
+                            </button>
                         </form>
                     </div>
                 </div>
-                @endif
+            </div>
 
-                <!-- Note Finale -->
-                @if($report->jury_final_score)
-                <div class="p-4 bg-gradient-success bg-opacity-10 border-0 text-center">
-                    <div class="alert alert-success shadow-lg border-0">
-                        <h3 class="display-5 fw-bold mb-2 text-success">
-                            <i class="fas fa-graduation-cap"></i> {{ $report->jury_final_score }}/20
-                        </h3>
-                        <div class="h2 fw-bold text-success mb-3">
-                            {{ $report->jury_appreciation ?? 'Excellent' }}
-                        </div>
-                        <p class="lead mb-0">
-                            <i class="fas fa-trophy text-warning me-2"></i>
-                            Félicitations ! Rapport validé final
-                        </p>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-body py-4 px-0">
+                        <h3 class="h6 fw-bold m-2 p-3 shadow-sm rounded-3">Rapports récents</h3>
+
+                        @forelse($reports->take(3) as $report)
+                            <div class="d-flex align-items-center justify-content-between p-3 mb-3 m-4 rounded-3 shadow"
+                                style="background: #f7f9fb;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="fa fa-file text-primary fs-4"></i>
+                                    <div>
+                                        <span class="d-block fw-bold small text-truncate"
+                                            style="max-width: 150px;">{{ $report->title }}</span>
+                                        <small class="text-muted">Déposé le
+                                            {{ $report->created_at->format('d M Y') }}</small>
+                                    </div>
+                                </div>
+
+                                @php
+                                    $btnClass = match ($report->status) {
+                                        'Validé final' => 'btn-success',
+                                        'À corriger' => 'btn-danger',
+                                        'En attente' => 'bg-wait',
+                                        default => 'btn-primary',
+                                    };
+                                @endphp
+                                <span
+                                    class="badge {{ str_contains($btnClass, 'bg') ? $btnClass : 'btn ' . $btnClass }} px-3 py-2 small">
+                                    {{ $report->status }}
+                                </span>
+                            </div>
+                        @empty
+                            <div class="text-center py-5">
+                                <div class="mb-4">
+                                    <svg width="180" height="180" viewBox="0 0 200 200" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="100" cy="100" r="90" fill="#f1f7fb" />
+                                        <path d="M70 60H130V140H70V60Z" fill="white" stroke="#1e7ca6" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                        <path d="M80 80H120" stroke="#cbd5e0" stroke-width="2" stroke-linecap="round" />
+                                        <path d="M80 100H120" stroke="#cbd5e0" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M80 120H100" stroke="#cbd5e0" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <circle cx="140" cy="140" r="30" fill="#1e7ca6" />
+                                        <path d="M132 140H148M140 132V148" stroke="white" stroke-width="3"
+                                            stroke-linecap="round" />
+                                    </svg>
+                                </div>
+                                <h5 class="fw-bold text-dark">Prêt à commencer ?</h5>
+                                <p class="text-muted px-4">
+                                    Vous n'avez pas encore soumis de rapport. Utilisez le formulaire à gauche pour
+                                    envoyer votre première version à votre encadreur.
+                                </p>
+                                <i class="fa fa-arrow-left text-primary d-none d-lg-inline animate-bounce"></i>
+                            </div>
+                        @endforelse
+
+                        @if ($reports->count() > 3)
+                            <div class="text-center mt-3">
+                                <a href="#" class="btn btn-link text-decoration-none fw-bold"
+                                    style="color: #1e7ca6;">VOIR PLUS</a>
+                            </div>
+                        @endif
                     </div>
                 </div>
-                @endif
             </div>
         </div>
-        @endforeach
-    @endif
-</div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById("dropZone");
+        const fileInput = document.getElementById("fileInput");
+        const fileNameDisplay = document.getElementById("fileNameDisplay");
+
+        dropZone.addEventListener("click", () => fileInput.click());
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length) {
+                fileNameDisplay.innerHTML = `<strong>Fichier sélectionné :</strong> ${e.target.files[0].name}`;
+            }
+        });
+    </script>
 </x-app-layout>

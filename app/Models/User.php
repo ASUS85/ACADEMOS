@@ -2,24 +2,18 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles;
-
+use Spatie\Permission\Traits\HasRoles; // Bien présent !
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
-
-    use HasRoles;
+    use HasFactory, Notifiable, HasRoles; // On regroupe les traits ici
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
+     * Les attributs assignables en masse.
      */
     protected $fillable = [
         'name',
@@ -28,26 +22,18 @@ class User extends Authenticatable
         'matricule',
         'grade',
         'department_id',
-        'specialite',
-        'sexe'
+        'filiere_id',    // Ajouté : nécessaire pour tes étudiants
+        'specialite',    // Utilisé pour les enseignants ou comme libellé
+        'sexe',
+        'role_name',     // Ajouté : pour stocker le nom du rôle en clair
+        'niveau',        // Ajouté : utile pour distinguer Niveau 1, 2, 3, etc.
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -56,6 +42,29 @@ class User extends Authenticatable
         ];
     }
 
+    // --- RELATIONS ---
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * Relation vers la filière (pour les étudiants)
+     */
+    public function filiere()
+    {
+        // On utilise 'filiere_id' qui est la clé étrangère standard
+        return $this->belongsTo(Filiere::class, 'filiere_id');
+    }
+
+    /**
+     * Pour les enseignants qui gèrent plusieurs filières
+     */
+    public function filieres()
+    {
+        return $this->belongsToMany(Filiere::class, 'teacher_filiere');
+    }
 
     public function reports()
     {
@@ -70,25 +79,5 @@ class User extends Authenticatable
     public function juryReports()
     {
         return $this->hasMany(Report::class, 'jury_id');
-    }
-
-    public function department()
-    {
-        return $this->belongsTo(Department::class);
-    }
-
-    public function filiere()
-    {
-        return $this->belongsTo(Filiere::class, 'specialite');
-    }
-
-    public function filieres()
-    {
-        return $this->belongsToMany(Filiere::class, 'teacher_filiere');
-    }
-
-    public function createdTeachers()
-    {
-        return $this->hasMany(User::class, 'created_by');
     }
 }

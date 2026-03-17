@@ -24,12 +24,10 @@ Route::get('/dashboard', function (Request $request) {
     $adminDepartment = $user->department_id;
 
     if ($user->hasAnyRole(['admin', 'superadmin'])) {
-        // 1. Requête pour le tableau des étudiants du département
         $query = User::role('student')
             ->where('department_id', $adminDepartment)
-            ->with(['filiere', 'reports.teacher']); // On charge le rapport et l'encadreur lié
+            ->with(['filiere', 'reports.teacher']);
 
-        // RECHERCHE SIMPLE (Nom ou Matricule)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -38,9 +36,10 @@ Route::get('/dashboard', function (Request $request) {
             });
         }
 
-        $students = $query->latest()->get();
+        // PAGINATION ICI : 10 par page
+        $students = $query->latest()->paginate(10)->withQueryString();
 
-        // 2. Statistiques (uniquement pour le département)
+        // Statistiques
         $studentsCount = User::role('student')->where('department_id', $adminDepartment)->count();
         $teachersCount = User::role('teacher')->where('department_id', $adminDepartment)->count();
 
@@ -64,15 +63,39 @@ Route::get('/dashboard', function (Request $request) {
         ));
     }
 
-     if ($user->hasRole('student')) {
-        $myReports = \App\Models\Report::where('student_id', $user->id)->latest()->get();
-        return view('student.dashboard', compact('myReports'));
+    if ($user->hasRole('student')) {
+        $reports = Report::where('student_id', $user->id)
+            ->with(['versions', 'teacher'])
+            ->latest()
+            ->get();
+        $latestReport = $reports->first();
+        return view('student.dashboard', compact('reports', 'latestReport'));
     }
 
-    // 3. Si c'est un ENSEIGNANT
     if ($user->hasRole('teacher')) {
-        $assignedReports = \App\Models\Report::where('teacher_id', $user->id)->get();
-        return view('teacher.dashboard', compact('assignedReports'));
+        $query = Report::where('teacher_id', $user->id)
+            ->with(['student.filiere', 'versions']);
+
+        if ($request->filled('filiere')) {
+            $query->whereHas('student', function ($q) use ($request) {
+                $q->where('filiere_id', $request->filiere);
+            });
+        }
+
+        // PAGINATION ICI AUSSI : 10 par page
+        $assignedReports = $query->latest()->paginate(10)->withQueryString();
+
+        // Pour les stats, on récupère le total sans la pagination pour les compteurs
+        $allReports = Report::where('teacher_id', $user->id)->get();
+        $stats = [
+            'pending' => $allReports->where('status', 'En attente')->count(),
+            'validated' => $allReports->where('status', 'Validé')->count(),
+            'finished' => $allReports->where('status', 'Validé final')->count(),
+        ];
+
+        $filieres = Filiere::where('department_id', $user->department_id)->get();
+
+        return view('teacher.dashboard', compact('assignedReports', 'stats', 'filieres'));
     }
 
     return redirect('/');
@@ -99,13 +122,29 @@ Route::middleware('auth')->group(function () {
         ->group(function () {
             //Route::get('/users', [AdminController::class, 'superadminUsers'])->name('users');
             Route::get('/reports', [ReportController::class, 'superadminReports'])->name('reports');
-            Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
-            Route::patch('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
-            Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+
             Route::get('/system', [AdminController::class, 'systemConfig'])->name('system');
             Route::get('/stats', [ReportController::class, 'superadminStats'])->name('stats');
-            Route::get('/users', [UserController::class, 'index'])->name('users');
             Route::resource('admins', AdminController::class);
+
+            Route::get('/students', [UserController::class, 'studentsIndex'])->name('students.index');
+            Route::get('/teachers', [UserController::class, 'teachersIndex'])->name('teachers.index');
+            Route::get('/users', [UserController::class, 'usersIndex'])->name('users.index');
+
+            Route::delete('/users{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+
+            // Filtres pour enseignants
+            Route::get('/teachers/{user}/edit', [UserController::class, 'editTeacher'])->name('teachers.edit');
+            Route::patch('/teachers/{user}', [UserController::class, 'updateTeacher'])->name('teachers.update');
+            Route::delete('/teachers/{user}', [UserController::class, 'destroyTeacher'])->name('teachers.destroy');
+            Route::get('/students/{user}/edit', [AdminController::class, 'editStudent'])->name('students.edit');
+
+            Route::get('/admins', [UserController::class, 'adminsIndex'])->name('admins.index');
+            Route::get('/admins/{user}/edit', [UserController::class, 'editAdmin'])->name('admins.edit');
+            Route::patch('/admins/{user}', [UserController::class, 'updateAdmin'])->name('admins.update');
+            Route::delete('/admins/{user}', [UserController::class, 'destroyAdmin'])->name('admins.destroy');
+            Route::get('/admins/create', [UserController::class, 'createAdmin'])->name('admins.create');
+            Route::post('/admins', [UserController::class, 'storeAdmin'])->name('admins.store');
         });
 
     // ADMIN (avec middleware role)
@@ -119,12 +158,23 @@ Route::middleware('auth')->group(function () {
             Route::get('/teachers/create', [TeacherController::class, 'create'])->name('teachers.create');
             Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
             Route::resource('teachers', TeacherController::class);
+            Route::get('/students', [AdminController::class, 'studentsIndex'])->name('students.index');
+            Route::get('/students/{user}/edit', [AdminController::class, 'editStudent'])->name('students.edit');
+            Route::patch('/students/{user}', [UserController::class, 'updateStudent'])->name('students.update');
+            Route::delete('/students/{user}', [AdminController::class, 'destroyUser'])->name('students.destroy');
+            Route::get('/teachers', [AdminController::class, 'teachersIndex'])->name('teachers.index');
+            Route::get('/teachers/{teacher}/edit', [TeacherController::class, 'update'])->name('teachers.edit');
+            Route::delete('/teachers/{teacher}', [TeacherController::class, 'destroy'])->name('teachers.destroy');
+            Route::get('/profile', [ProfileController::class, 'adminProfile'])->name('profile.admin');
         });
 
 
 
     // ENSEIGNANT
-    Route::prefix('teacher')->name('teacher.')->group(function () {
+     Route::prefix('teacher')->name('teacher.')->middleware('role:teacher')->group(function () {
+        Route::get('/profile', [TeacherController::class, 'showProfile'])->name('profile');
+        Route::patch('/profile', [TeacherController::class, 'updateProfile'])->name('profile.update');
+        Route::post('/profile/password', [TeacherController::class, 'updatePassword'])->name('profile.password');
         Route::get('/reports', [ReportController::class, 'teacherIndex'])->name('reports.index');
     });
 

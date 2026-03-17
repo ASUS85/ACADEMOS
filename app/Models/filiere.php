@@ -23,4 +23,9 @@ class Filiere extends Model
     {
         return $this->hasMany(Subject::class);
     }
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
 }

@@ -1,174 +1,121 @@
 <style>
-    /* Global Content Area */
-    .content-area {
-        background-color: #f4f2f7;
-        min-height: 100vh;
-        padding: 20px;
+    :root {
+        --purple: #6f42c1;
+        --blue-main: #3681B6;
     }
 
-    /* Cartes Statistiques */
-    .stat-card {
-        border: none;
-        border-radius: 12px;
-        transition: transform 0.2s ease;
-        overflow: hidden;
-    }
-
-    .stat-card:hover {
+    .stat-hover:hover {
         transform: translateY(-3px);
     }
 
-    .icon-circle {
-        width: 48px;
-        height: 48px;
-        background: rgba(255, 255, 255, 0.25);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Actions Rapides */
-    .action-btn {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 15px;
-        border: 1px solid #edf2f7;
-        border-radius: 10px;
-        text-decoration: none;
-        color: #4a5568;
-        margin-bottom: 12px;
-        transition: all 0.2s;
-        background: #ffffff;
-    }
-
-    .action-btn:hover {
-        background: #f8fafc;
-        border-color: #cbd5e0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        color: #2d3748;
-    }
-
-    .action-icon {
-        width: 38px;
-        height: 38px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        margin-right: 12px;
-    }
-
-    /* Tableau */
-    .table-container {
-        border-radius: 15px;
-        overflow: hidden;
-        background: white;
-    }
-
-    .custom-table thead {
-        background-color: #edf2f7;
-    }
-
-    .custom-table th {
-        border: none;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.05em;
-        color: #718096;
-        padding: 15px;
-    }
-
-    .custom-table td {
-        margin: 11px;
-        padding: 4px;
-        vertical-align: middle;
-        border: 2px solid #f3f5f7;
-    }
-
-    /* Légende Graphique */
-    .legend-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-        padding: 10px ;
-        border: 1px solid #e4e6e5;
-        font-size: 0.9rem;
-        border-radius: 20px;
-    }
-
-    .dot {
+    .legend-dot {
         width: 22px;
         height: 22px;
         border-radius: 50%;
-        margin-right: 10px;
-    }
-    .table-card {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        overflow: hidden;
-        margin-top: 20px;
-        border: none;
     }
 
-    .custom-table {
-        border-collapse: separate;
-        border-spacing: 0;
-        width: 100%;
+    .legend-pill {
+        border-radius: 999px;
     }
 
-    /* Style des en-têtes avec les couleurs alternées de l'image */
-    .custom-table thead th {
-        background-color: #E2E8F0; /* Bleu très clair / Gris */
-        color: #4A5568;
-        font-weight: 700;
-        text-transform: none;
-        padding: 15px;
-        border: 2px solid rgb(248, 248, 248);
-        vertical-align: middle;
+    .scroll-thin::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .scroll-thin::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 10px;
+    }
+
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(50px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .animate__animated {
+        animation: fadeInRight 0.4s ease-out;
+    }
+
+    .modal-wide {
+        min-height: 800px;
+        min-width: 900px;
     }
 </style>
 
 @php
-    // Logique de récupération des données
-    $studentsCount = \App\Models\User::role('student')->count();
-    $teachersCount = \App\Models\User::role('teacher')->count();
-    $reportsCount = \App\Models\Report::count();
-    $validatedCount = \App\Models\Report::where('status', 'Validé final')->count();
+    $user = auth()->user();
+    $adminDepartment = $user->department_id;
 
-    // Pour les stats du graphique (exemples de statuts à adapter)
-    $modifiedCount = \App\Models\Report::where('status', 'modifié')->count();
-    $commentedCount = \App\Models\Report::where('status', 'commenté')->count();
+    $studentsCount = \App\Models\User::role('student')->where('department_id', $adminDepartment)->count();
 
-    $latestReports = \App\Models\Report::with(['student', 'teacher'])
-        ->latest()
-        ->limit(5)
-        ->get();
+    $teachersCount = \App\Models\User::role('teacher')->where('department_id', $adminDepartment)->count();
+
+    $reportsQuery = \App\Models\Report::whereHas('student', function ($q) use ($adminDepartment) {
+        $q->where('department_id', $adminDepartment);
+    });
+
+    $totalReports = (clone $reportsQuery)->count();
+    $submittedCount = (clone $reportsQuery)->where('status', 'Soumis')->count();
+    $assignedCount = (clone $reportsQuery)->where('status', 'Affecté')->count();
+    $evaluatedCount = (clone $reportsQuery)->where('status', 'Évalué')->count();
+    $validatedCount = (clone $reportsQuery)->where('status', 'Validé final')->count();
+
+    $query = \App\Models\User::role('student')
+        ->where('department_id', $adminDepartment)
+        ->whereHas('reports')
+        ->with(['filiere', 'reports.teacher']);
+
+    if (request()->filled('search')) {
+        $search = request('search');
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%$search%")
+              ->orWhere('matricule', 'like', "%$search%");
+        });
+    }
+
+    $students = $query->latest()->paginate(10)->withQueryString();
 @endphp
 
-<div class="content-area">
+
+
+
+
+<div class="bg-light py-3 px-3 px-md-4">
     <div class="mb-4">
-        <h4 class="fw-bold text-uppercase" style="color: #2d3748;">Tableau de bord administrateur</h4>
+        <h4 class="fw-bold text-uppercase text-dark">Tableau de bord administrateur</h4>
     </div>
 
+    {{-- Stat cards --}}
     <div class="row g-3 mb-4">
-        <div class="col-md-3 shadow-sm">
-            <div class="card stat-card text-white shadow-sm" style="background-color: #3EA84C;">
+        <div class="col-md-3">
+            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background-color:#3EA84C;">
                 <div class="card-body d-flex align-items-center">
-                    <div class="icon-circle me-3"><i class="fas fa-users fa-lg"></i></div>
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
+                        <i class="fas fa-users fa-lg"></i>
+                    </div>
                     <div>
-                        <small class="opacity-75">Total Etudiants</small>
+                        <small class="opacity-75">Total Étudiants</small>
                         <h2 class="fw-bold mb-0">{{ $studentsCount }}</h2>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 shadow-sm">
-            <div class="card stat-card shadow-sm text-white" style="background-color: #3681B6;">
+
+        <div class="col-md-3">
+            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background-color:#3681B6;">
                 <div class="card-body d-flex align-items-center">
-                    <div class="icon-circle me-3"><i class="fas fa-user-tie fa-lg"></i></div>
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
+                        <i class="fas fa-user-tie fa-lg"></i>
+                    </div>
                     <div>
                         <small class="opacity-75">Total Enseignants</small>
                         <h2 class="fw-bold mb-0">{{ $teachersCount }}</h2>
@@ -176,10 +123,14 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 shadow-sm">
-            <div class="card stat-card shadow-sm text-white" style="background-color: #3EA84C;">
+
+        <div class="col-md-3">
+            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background-color:#3EA84C;">
                 <div class="card-body d-flex align-items-center">
-                    <div class="icon-circle me-3"><i class="fas fa-file-upload fa-lg"></i></div>
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
+                        <i class="fas fa-file-upload fa-lg"></i>
+                    </div>
                     <div>
                         <small class="opacity-75">Rapports soumis</small>
                         <h2 class="fw-bold mb-0">{{ $reportsCount }}</h2>
@@ -187,10 +138,14 @@
                 </div>
             </div>
         </div>
+
         <div class="col-md-3">
-            <div class="card stat-card shadow-sm text-white" style="background-color: #3681B6;">
+            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background-color:#3681B6;">
                 <div class="card-body d-flex align-items-center">
-                    <div class="icon-circle me-3"><i class="fas fa-check-circle fa-lg"></i></div>
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
+                        <i class="fas fa-check-circle fa-lg"></i>
+                    </div>
                     <div>
                         <small class="opacity-75">Rapports validés</small>
                         <h2 class="fw-bold mb-0">{{ $validatedCount }}</h2>
@@ -200,35 +155,38 @@
         </div>
     </div>
 
+    {{-- Stat + actions --}}
     <div class="row g-4 mb-4">
         <div class="col-md-7">
-            <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
                 <div class="card-body">
-                    <h5 class="fw-bold mb-3 p-3 pt-0 text-center shadow">Statistique des rapports</h5>
+                    <h5 class="fw-bold mb-3 p-3 pt-0 text-center shadow-sm bg-white rounded-3">Statistique des rapports
+                    </h5>
                     <div class="row align-items-center">
                         <div class="col-sm-6">
-                            <div style="height: 220px;">
+                            <div style="height:220px;">
                                 <canvas id="reportChart"></canvas>
                             </div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="ps-md-4">
-                                <div class="legend-item">
-                                    <span class="dot" style="background: #f6a54c;"></span>
-                                    <span>Soumis: <strong>{{ $reportsCount }}</strong></span>
+                            <div class="ps-sm-3 mt-3 mt-sm-0">
+                                <div class="d-flex align-items-center mb-2 p-2 border rounded-pill">
+                                    <span class="legend-dot me-2" style="background:#f6a54c;"></span>
+                                    <span>Soumis: <strong>{{ $submittedCount }}</strong></span>
                                 </div>
-                                <div class="legend-item">
-                                    <span class="dot" style="background: #ff7d7d;"></span>
-                                    <span>Affecter: <strong>{{ $modifiedCount }}</strong></span>
+                                <div class="d-flex align-items-center mb-2 p-2 border rounded-pill">
+                                    <span class="legend-dot me-2" style="background:#ff7d7d;"></span>
+                                    <span>Affectés: <strong>{{ $assignedCount }}</strong></span>
                                 </div>
-                                <div class="legend-item">
-                                    <span class="dot" style="background: #6da8e3;"></span>
-                                    <span>Evaluer: <strong>{{ $commentedCount }}</strong></span>
+                                <div class="d-flex align-items-center mb-2 p-2 border rounded-pill">
+                                    <span class="legend-dot me-2" style="background:#6da8e3;"></span>
+                                    <span>Évalués: <strong>{{ $evaluatedCount }}</strong></span>
                                 </div>
-                                <div class="legend-item">
-                                    <span class="dot" style="background: #4cc38a;"></span>
-                                    <span>Valider: <strong>{{ $validatedCount }}</strong></span>
+                                <div class="d-flex align-items-center mb-2 p-2 border rounded-pill">
+                                    <span class="legend-dot me-2" style="background:#4cc38a;"></span>
+                                    <span>Validés: <strong>{{ $validatedCount }}</strong></span>
                                 </div>
+
                             </div>
                         </div>
                     </div>
@@ -236,14 +194,18 @@
             </div>
         </div>
 
+        {{-- Actions rapides --}}
         <div class="col-md-5">
-            <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
                 <div class="card-body">
-                    <h5 class="fw-bold mb-3 p-3 pt-0 text-center shadow">Action rapide</h5>
+                    <h5 class="fw-bold mb-3 p-3 pt-0 text-center shadow-sm bg-white rounded-3">Action rapide</h5>
 
-                    <a href="{{ url('/admin/reports') }}" class="action-btn shadow-sm">
+                    <a href="{{ url('/admin/reports') }}"
+                        class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
                         <div class="d-flex align-items-center">
-                            <div class="action-icon bg-primary-subtle text-primary"><i class="fa fa-file-invoice"></i>
+                            <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 me-3"
+                                style="width:38px;height:38px;">
+                                <i class="fa fa-file-invoice"></i>
                             </div>
                             <div>
                                 <div class="fw-bold mb-0">Rapports soumis</div>
@@ -253,9 +215,12 @@
                         <i class="fa fa-chevron-right fa-xs text-muted"></i>
                     </a>
 
-                    <a href="{{ url('/students') }}" class="action-btn shadow-sm">
+                    <a href="{{ url('admin/students') }}"
+                        class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
                         <div class="d-flex align-items-center">
-                            <div class="action-icon bg-success-subtle text-success"><i class="fa fa-user-graduate"></i>
+                            <div class="d-flex align-items-center justify-content-center bg-success-subtle text-success rounded-3 me-3"
+                                style="width:38px;height:38px;">
+                                <i class="fa fa-user-graduate"></i>
                             </div>
                             <div>
                                 <div class="fw-bold mb-0">Liste des étudiants</div>
@@ -265,9 +230,12 @@
                         <i class="fa fa-chevron-right fa-xs text-muted"></i>
                     </a>
 
-                    <a href="{{ url('/teachers') }}" class="action-btn shadow-sm">
+                    <a href="{{ url('admin/teachers') }}"
+                        class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
                         <div class="d-flex align-items-center">
-                            <div class="action-icon bg-info-subtle text-info"><i class="fa fa-chalkboard-teacher"></i>
+                            <div class="d-flex align-items-center justify-content-center bg-info-subtle text-info rounded-3 me-3"
+                                style="width:38px;height:38px;">
+                                <i class="fa fa-chalkboard-teacher"></i>
                             </div>
                             <div>
                                 <div class="fw-bold mb-0">Liste des enseignants</div>
@@ -281,130 +249,447 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px; overflow: hidden;">
-        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold mb-0" style="color: #2d3748;">📋 Liste des Étudiants</h5>
+    {{-- Table étudiants --}}
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark">📋 Liste des Étudiants</h5>
 
-            <form method="GET" action="{{ url()->current() }}" class="d-flex" style="width: 300px;">
-                <div class="input-group shadow-sm" style="border-radius: 10px; overflow: hidden;">
-                    <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
+            <form method="GET" action="{{ url()->current() }}" class="d-flex" style="max-width:300px;">
+                <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                    <span class="input-group-text bg-light border-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
                     <input type="text" name="search" class="form-control bg-light border-0 shadow-none"
                         placeholder="Rechercher un étudiant..." value="{{ request('search') }}">
                 </div>
             </form>
         </div>
 
-        <div class="table-responsive">
-            <table class="table custom-table mb-0">
-                <thead>
-                    <tr>
-                        <th class="ps-4" width="60">N°</th>
-                        <th>Étudiant</th>
-                        <th>Filière & Niveau</th>
-                        <th>Matricule</th>
-                        <th>Encadreur</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($students as $index => $student)
-                        <tr class="align-middle bg-white">
-                            <td class="ps-4 text-muted fw-medium">
-                                {{ $index + 1 }}
-                            </td>
-
-                            <td>
-                                <div class="fw-bold text-dark">{{ $student->name }}</div>
-                                <small class="text-muted">{{ $student->email }}</small>
-                            </td>
-
-                            <td>
-                                <span class="badge text-dark px-3 mb-1">
-                                    {{ $student->filiere->name ?? 'N/A' }}
-                                </span>
-                                <div class="small text-secondary ps-1">
-                                    <i class="fas fa-layer-group me-1 small"></i>{{ $student->niveau ?? 'N/A' }}
-                                </div>
-                            </td>
-
-                            <td>
-                                <span class="badge bg-light text-primary border border-primary-subtle fw-bold">
-                                    {{ $student->matricule ?? '-' }}
-                                </span>
-                            </td>
-
-                            <td>
-                                @php
-                                    // On récupère l'encadreur lié au rapport de l'étudiant
-                                    $lastReport = $student->reports->last();
-                                @endphp
-                                @if ($lastReport && $lastReport->teacher)
-                                    <div class="d-flex align-items-center">
-                                        <div class="bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center"
-                                            style="width: 28px; height: 28px; font-size: 0.65rem; font-weight: bold;">
-                                            {{ strtoupper(substr($lastReport->teacher->name, 0, 2)) }}
-                                        </div>
-                                        <span class="small fw-bold text-dark">{{ $lastReport->teacher->name }}</span>
-                                    </div>
-                                @else
-                                    <span class="text-muted small italic">Pas d'encadreur</span>
-                                @endif
-                            </td>
-
-                            <td class="text-center">
-                                <div class="btn-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
-                                    <a href="{{ route('admin.teachers.edit', $student) }}"
-                                        class="btn btn-sm btn-white border-end" title="Modifier / Gérer">
-                                        <i class="fas fa-user-edit text-primary"></i>
-                                    </a>
-                                    <a href="#" class="btn btn-sm btn-white" title="Voir les rapports">
-                                        <i class="fas fa-folder-open text-success"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
+        <div id="table-data">
+            <div class="table-responsive scroll-thin">
+                <table class="table mb-0 align-middle">
+                    <thead class="bg-light">
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
-                                <div class="mb-2"><i class="fas fa-search fa-2x opacity-25"></i></div>
-                                Aucun étudiant trouvé pour ce département.
-                            </td>
+                            <th class="ps-4" width="60">N°</th>
+                            <th>Étudiant</th>
+                            <th>Filière & Niveau</th>
+                            <th>Matricule</th>
+                            <th>Encadreur</th>
+                            <th class="text-center">Actions</th>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse($students as $index => $student)
+                            <tr class="bg-white">
+                                <td class="ps-4 text-muted fw-medium">
+                                    {{ ($students->currentPage() - 1) * $students->perPage() + $loop->iteration }}
+                                </td>
+
+                                <td>
+                                    <div class="fw-bold text-dark">{{ $student->name }}</div>
+                                    <small class="text-muted">{{ $student->email }}</small>
+                                </td>
+
+                                <td>
+                                    <span class="badge bg-light text-dark px-3 mb-1">
+                                        {{ $student->filiere->name ?? 'N/A' }}
+                                    </span>
+                                    <div class="small text-secondary">
+                                        <i class="fas fa-layer-group me-1 small"></i>{{ $student->niveau ?? 'N/A' }}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="badge bg-light text-primary border border-primary-subtle fw-bold">
+                                        {{ $student->matricule ?? '-' }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @php $lastReport = $student->reports->last(); @endphp
+                                    @if ($lastReport && $lastReport->teacher)
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                                                style="width:28px;height:28px;font-size:0.65rem;font-weight:bold;">
+                                                {{ strtoupper(substr($lastReport->teacher->name, 0, 2)) }}
+                                            </div>
+                                            <span
+                                                class="small fw-bold text-dark">{{ $lastReport->teacher->name }}</span>
+                                        </div>
+                                    @else
+                                        <span class="text-muted small fst-italic">Pas d'encadreur</span>
+                                    @endif
+                                </td>
+
+                                <td class="text-center">
+                                    <div class="btn-group shadow-sm rounded-3 overflow-hidden">
+                                        <button type="button" onclick='openEditModal(@json($student->load('filiere')))'
+                                            class="btn btn-sm btn-light border-end" title="Modifier">
+                                            <i class="fas fa-user-edit text-primary"></i>
+                                        </button>
+                                        <button type="button"
+                                            onclick="openReportModal({{ json_encode($student) }}, {{ json_encode($student->reports) }})"
+                                            class="btn btn-sm btn-light text-success" title="Dossier & Affectation">
+                                            <i class="fas fa-folder-open"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <div class="mb-2">
+                                        <i class="fas fa-search fa-2x opacity-25"></i>
+                                    </div>
+                                    Aucun étudiant trouvé pour ce département.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-footer bg-white border-0 py-3 d-flex justify-content-end align-items-center">
+                <div class="pagination-custom pagination-ajax">
+                    {{ $students->links('pagination::bootstrap-5') }}
+                </div>
+            </div>
         </div>
     </div>
-
 </div>
 
+{{-- Modal édition étudiant --}}
+<div class="modal fade" id="editStudentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-wide rounded-4 shadow-lg">
+            <div class="modal-header bg-gradient text-white"
+                style="background:linear-gradient(135deg,#3681B6,#6f42c1);">
+                <div>
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-graduate me-2"></i>
+                        Dossier Étudiant
+                    </h5>
+                    <small class="opacity-75">Modifier les informations académiques</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="text-center my-3">
+                <img id="student_avatar" src="https://ui-avatars.com/api/?name=Student&size=80"
+                    class="rounded-circle shadow mb-2" alt="avatar">
+                <h6 id="student_name_display_modal" class="fw-bold mb-0"></h6>
+                <small class="text-muted">Profil étudiant</small>
+            </div>
+
+            <div class="modal-body bg-light">
+                <div class="card border-0 shadow-sm mb-3 rounded-3">
+                    <div class="card-body">
+                        <form id="editStudentForm">
+                            <input type="hidden" id="edit_id">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted text-uppercase">Nom
+                                        Complet</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0">
+                                            <i class="fas fa-user text-primary"></i>
+                                        </span>
+                                        <input type="text" id="edit_name" class="form-control border-start-0 ps-0"
+                                            placeholder="Nom de l'étudiant">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted text-uppercase">
+                                        Email Institutionnel
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0">
+                                            <i class="fas fa-envelope text-primary"></i>
+                                        </span>
+                                        <input type="email" id="edit_email"
+                                            class="form-control border-start-0 ps-0" placeholder="email@univ.com">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted text-uppercase">
+                                        Matricule / Identifiant
+                                    </label>
+                                    <input type="text" id="edit_matricule" class="form-control bg-white"
+                                        placeholder="Ex: 22G00123">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted text-uppercase">
+                                        Filière / Niveau
+                                    </label>
+                                    <select id="edit_level" class="form-select bg-white">
+                                        <option value="L3">Licence 3</option>
+                                        <option value="M1">Master 1</option>
+                                        <option value="M2">Master 2</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <button type="button" onclick="confirmDelete()" class="btn btn-outline-danger">
+                        <i class="fas fa-trash-alt me-2"></i>Supprimer l'étudiant
+                    </button>
+                    <div>
+                        <button type="button" class="btn btn-light me-2" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" onclick="submitEdit()" class="btn btn-primary fw-bold px-4">
+                            Enregistrer les modifications
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0"></div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal rapports --}}
+<div class="modal fade" id="reportDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content modal-wide rounded-4 shadow-lg">
+            <div class="modal-header bg-gradient text-white"
+                style="background:linear-gradient(135deg,#3681B6,#6f42c1);">
+                <div>
+                    <h5 class="modal-title">📁 Gestion des Rapports</h5>
+                    <small class="opacity-75">Affectation & suivi académique</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-4 pt-2">
+                <div class="row g-4">
+                    <div class="col-lg-12">
+                        <div class="card h-100 border-0 bg-light rounded-4">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-4 text-dark">
+                                    <i class="fas fa-file-pdf me-2 text-danger"></i>Documents Soumis
+                                </h6>
+                                <div id="reports_list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-12">
+                        <div class="card border-0 shadow-sm rounded-4 mb-3">
+                            <div class="card-header bg-white border-0 pt-3">
+                                <h6 class="fw-bold m-0">
+                                    <i class="fas fa-user-tie me-2 text-success"></i>
+                                    Affectation Enseignant (Encadreur)
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="teacher_assignment_section" class="table-responsive scroll-thin"
+                                    style="max-height:200px;">
+                                    <table class="table table-hover align-middle">
+                                        <tbody id="teachers_table_body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 border-start border-4"
+                            style="border-color:var(--purple) !important;">
+                            <div class="card-header bg-white border-0 pt-3">
+                                <h6 class="fw-bold m-0" style="color:var(--purple);">
+                                    <i class="fas fa-gavel me-2"></i>Affectation Jury (Soutenance)
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="jury_assignment_section" class="table-responsive scroll-thin"
+                                    style="max-height:200px;">
+                                    <table class="table table-hover align-middle">
+                                        <tbody id="juries_table_body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Scripts --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const ctx = document.getElementById('reportChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: ["Soumis", "Affecté", "Evalué", "Validé"],
-                datasets: [{
-                    data: [{{ $reportsCount }}, {{ $modifiedCount }}, {{ $commentedCount }},
-                        {{ $validatedCount }}
-                    ],
-                    backgroundColor: ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],
-                    borderWidth: 2,
-                    borderColor: '#ffffff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    } // Légende gérée en HTML pour le style
-                },
-                cutout: '0%' // Change à '50%' si tu veux un format Donut
-            }
-        });
+   document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('reportChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ["Soumis", "Affecté", "Évalué", "Validé"],
+            datasets: [{
+                data: [
+                    {{ $submittedCount }},
+                    {{ $assignedCount }},
+                    {{ $evaluatedCount }},
+                    {{ $validatedCount }}
+                ],
+                backgroundColor: ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display:false } },
+            cutout: '0%'
+        }
     });
+});
+
+
+    // Pagination AJAX
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.pagination-ajax a')) {
+            e.preventDefault();
+            let url = e.target.closest('a').href;
+            fetchTable(url);
+        }
+    });
+
+    function fetchTable(url) {
+        const table = document.getElementById('table-data');
+        table.style.opacity = '0.5';
+
+        fetch(url, {
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newTable = doc.getElementById('table-data').innerHTML;
+                table.innerHTML = newTable;
+                table.style.opacity = '1';
+                window.history.pushState({}, '', url);
+            })
+            .catch(error => console.warn('Erreur AJAX:', error));
+    }
+
+    const allTeachers = @json(\App\Models\User::role('teacher')->where('department_id', auth()->user()->department_id)->get());
+    const allJuries = @json(\App\Models\User::role('jury')->get());
+
+    function openEditModal(student) {
+        document.getElementById('edit_id').value = student.id;
+        document.getElementById('edit_name').value = student.name ?? '';
+        document.getElementById('edit_email').value = student.email ?? '';
+        document.getElementById('edit_matricule').value = student.matricule ?? '';
+        document.getElementById('edit_level').value = student.niveau ?? 'L3';
+
+        document.getElementById('student_name_display_modal').innerText = student.name;
+        document.getElementById('student_avatar').src =
+            `https://ui-avatars.com/api/?name=${student.name}&size=80`;
+
+        new bootstrap.Modal(document.getElementById('editStudentModal')).show();
+    }
+
+    function openReportModal(student, reports) {
+        document.getElementById('student_name_display_modal').innerText = student.name;
+
+        // Liste des rapports
+        let reportHtml = '';
+        reports.forEach(report => {
+            reportHtml += `
+                <div class="p-3 bg-white rounded-4 shadow-sm border mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="fw-bold mb-1">${report.title ?? 'Rapport'}</p>
+                            <small class="text-muted">${report.status ?? ''}</small>
+                        </div>
+                        <a href="/storage/${report.file_path}" target="_blank"
+                           class="btn btn-sm btn-danger rounded-pill px-3">
+                            PDF
+                        </a>
+                    </div>
+                </div>`;
+        });
+        document.getElementById('reports_list').innerHTML = reportHtml || '<p class="text-muted">Aucun rapport.</p>';
+
+        // Enseignants
+        let tBody = '';
+        allTeachers.forEach(t => {
+            tBody += `
+                <tr>
+                    <td>
+                        <img src="https://ui-avatars.com/api/?name=${t.name}&size=30"
+                             class="rounded-circle me-2">
+                        <b>${t.name}</b>
+                    </td>
+                    <td class="text-end">
+                        <button onclick="processAssignment(${reports[0]?.id ?? 0}, ${t.id}, 'teacher')"
+                                class="btn btn-sm btn-outline-success rounded-pill px-3">
+                            Affecter
+                        </button>
+                    </td>
+                </tr>`;
+        });
+        document.getElementById('teachers_table_body').innerHTML = tBody;
+
+        // Juries
+        let jBody = '';
+        allJuries.forEach(j => {
+            jBody += `
+                <tr>
+                    <td>
+                        <i class="fas fa-user-shield me-2" style="color:var(--purple);"></i>
+                        <b>${j.name}</b>
+                    </td>
+                    <td class="text-end">
+                        <button onclick="processAssignment(${reports[0]?.id ?? 0}, ${j.id}, 'jury')"
+                                class="btn btn-sm border rounded-pill px-3"
+                                style="border-color:var(--purple);color:var(--purple);">
+                            Désigner
+                        </button>
+                    </td>
+                </tr>`;
+        });
+        document.getElementById('juries_table_body').innerHTML = jBody;
+
+        new bootstrap.Modal(document.getElementById('reportDetailsModal')).show();
+    }
+
+    function processAssignment(reportId, userId, type) {
+        if (!reportId) return;
+        let url = type === 'teacher' ? `/reports/${reportId}/assign` : `/reports/${reportId}/assign-jury`;
+        let data = type === 'teacher' ? {
+            teacher_id: userId
+        } : {
+            jury_id: userId
+        };
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(() => {
+            showToast(`Affectation ${type === 'teacher' ? "de l'encadreur" : 'du jury'} réussie !`);
+            setTimeout(() => location.reload(), 1200);
+        });
+    }
+
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className =
+            'position-fixed top-0 end-0 m-4 p-3 bg-dark text-white rounded-3 shadow-lg animate__animated';
+        toast.style.zIndex = "9999";
+        toast.innerHTML = `<i class="fas fa-check-circle text-success me-2"></i> ${message}`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
 </script>

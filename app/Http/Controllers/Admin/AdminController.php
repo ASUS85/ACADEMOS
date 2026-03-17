@@ -103,8 +103,7 @@ class AdminController extends Controller
     {
         $user->delete();
 
-        return redirect()->route('superadmin.users')
-            ->with('success', 'Utilisateur supprimé avec succès ❌');
+        return back()->with('success', 'Utilisateur supprimé avec succès ✅');
     }
 
     // Gestion des rapports superadmin
@@ -163,10 +162,67 @@ class AdminController extends Controller
             $users->where('specialite', $request->specialite);
         }
 
-        $users = $users->with(['roles','department','filiere'])->paginate(10);
+        $users = $users->with(['roles', 'department', 'filiere'])->paginate(10);
 
         $filieres = \App\Models\Filiere::where('department_id', $adminDepartment)->get();
 
         return view('admin.admins.listUsers', compact('users', 'filieres'));
+    }
+
+    public function studentsIndex(Request $request)
+    {
+        $adminDepartment = auth()->user()->department_id;
+
+        $query = User::role('student')
+            ->where('department_id', $adminDepartment)
+            ->with('filiere');
+
+        // Recherche
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                    ->orWhere('matricule', 'like', "%$search%");
+            });
+        }
+
+        // Filtre filière
+        if ($request->filled('filiere')) {
+            $query->where('filiere_id', $request->filiere);
+        }
+
+        $students = $query->latest()->paginate(15)->withQueryString();
+        $filieres = Filiere::where('department_id', $adminDepartment)->get();
+        $studentsCount = $query->count();
+
+        return view('admin.admins.listStudent', compact('students', 'filieres', 'studentsCount'));
+    }
+
+
+    public function teachersIndex(Request $request)
+    {
+        $adminDepartment = auth()->user()->department_id;
+
+        $query = User::role('teacher')
+            ->where('department_id', $adminDepartment)
+            ->with('filiere');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                    ->orWhere('email', 'like', "%$search%");
+            });
+        }
+
+        if ($request->filled('filiere')) {
+            $query->where('filiere_id', $request->filiere);
+        }
+
+        $teachers      = $query->latest()->paginate(15)->withQueryString();
+        $filieres      = Filiere::where('department_id', $adminDepartment)->get();
+        $teachersCount = $query->count();
+
+        return view('admin.admins.listTeacher', compact('teachers', 'filieres', 'teachersCount'));
     }
 }

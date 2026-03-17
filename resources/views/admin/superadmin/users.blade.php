@@ -30,8 +30,8 @@
                                         <td>{{ $user->email }}</td>
                                         <td>{{ $user->roles->pluck('name')->join(', ') }}</td>
                                         <td>
-                                            <a href="{{ route('superadmin.users.edit', $user) }}">Éditer</a>
-                                            <form action="{{ route('superadmin.users.destroy', $user) }}" method="POST"
+                                            <a href="{{ route('', $user) }}">Éditer</a>
+                                            <form action="{{ route('', $user) }}" method="POST"
                                                 style="display:inline;">
                                                 @csrf
                                                 @method('DELETE')

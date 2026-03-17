@@ -21,7 +21,15 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: #f8f9fa;
+            background-color: #EEECF3;
+        }
+
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1040;
         }
 
         .sidebar {
@@ -40,7 +48,7 @@
         }
 
         .sidebar.expanded {
-            width: 200px;
+            width: 185px;
         }
 
         /* Style du bouton Toggle */
@@ -104,15 +112,15 @@
         }
 
         .content-area {
-            margin-top: 0px;
+            margin-top: 60px;
             margin-left: 40px;
             padding: 30px;
             transition: margin-left 0.3s;
         }
 
         .sidebar.expanded~.content-area {
-            margin-left: 220px;
-            margin-top: 0px;
+            margin-left: 180px;
+            margin-top: 60px;
         }
 
         .mt-auto-custom {
@@ -166,31 +174,31 @@
             <i class="bi bi-list"></i>
         </div>
 
-        <a href="/dashboard">
+        <a href="{{ route('dashboard') }}">
             <i class="fa fa-house"></i>
             <span class="menu-text">Dashboard</span>
         </a>
 
-        @switch(Auth::user()->role)
+        @switch(Auth::user()->role_name)
             @case('admin')
-                {{-- <a href="/students">
-                    <i class="fa fa-user-graduate"></i>
-                    <span class="menu-text">Étudiants</span>
-                </a>
-                <a href="/teachers">
-                    <i class="fa fa-chalkboard-teacher"></i>
-                    <span class="menu-text">Enseignants</span>
-                </a> --}}
                 <a href="{{ url('/admin/users') }}">
                     <i class="fa fa-users"></i>
                     <span class="menu-text">Utilisateurs</span>
                 </a>
+                <a href="{{ url('/admin/profile') }}">
+                    <i class="fa fa-user"></i>
+                    <span class="menu-text">Profil</span>
+                </a>
             @break
 
             @case('teacher')
-                <a href="/reports">
+                <a href="{{ url('/teacher/reports') }}">
                     <i class="fa fa-file"></i>
                     <span class="menu-text">Rapports</span>
+                </a>
+                <a href="{{ url('/teacher/profile') }}">
+                    <i class="fa fa-user"></i>
+                    <span class="menu-text">Profil</span>
                 </a>
             @break
 
@@ -199,9 +207,21 @@
                     <i class="fa fa-file"></i>
                     <span class="menu-text">Mes Rapports</span>
                 </a>
+                <a href="{{ url('/teacher/profile') }}">
+                    <i class="fa fa-user"></i>
+                    <span class="menu-text">Profil</span>
+                </a>
             @break
 
             @case('superadmin')
+                <a href="{{ url('/admin/users') }}">
+                    <i class="fa fa-users"></i>
+                    <span class="menu-text">Utilisateurs</span>
+                </a>
+                <a href="{{ url('/admin/profile') }}">
+                    <i class="fa fa-user"></i>
+                    <span class="menu-text">Profil</span>
+                </a>
                 <a href="/reports">
                     <i class="fa fa-file"></i>
                     <span class="menu-text">Rapports</span>
@@ -234,11 +254,6 @@
             @default
                 <span class="menu-text">Aucun menu disponible</span>
         @endswitch
-
-        <a href="/profile">
-            <i class="fa fa-user"></i>
-            <span class="menu-text">Profil</span>
-        </a>
 
         <div class="mt-auto-custom">
             <button type="button" class="logout-btn" data-bs-toggle="modal" data-bs-target="#logoutModal">
@@ -310,6 +325,30 @@
             sidebar.classList.toggle("expanded");
         });
     </script>
+
+
+    @if (session('success'))
+        <div id="toast-success" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999;">
+            <div class="toast show border-0" style="background-color:#d1e7dd; color:#0f5132;">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        {{ session('success') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            setTimeout(() => {
+                let toast = document.getElementById('toast-success');
+                if (toast) {
+                    toast.style.transition = "opacity 0.5s";
+                    toast.style.opacity = "0";
+                    setTimeout(() => toast.remove(), 500);
+                }
+            }, 3000); // ⏱️ 3 secondes
+        </script>
+    @endif
 </body>
 
 </html>

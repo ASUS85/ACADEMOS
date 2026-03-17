@@ -57,4 +57,27 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
+    public function adminProfile()
+    {
+        if (!auth()->user()->hasAnyRole(['admin', 'superadmin'])) {
+            abort(403);
+        }
+
+        $user = auth()->user()->load('department');
+        return view('admin.admins.profile', compact('user'));
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'password' => ['required', 'confirmed', 'min:8'],
+        ]);
+
+        auth()->user()->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return back()->with('success', 'Mot de passe mis à jour avec succès !');
+    }
 }

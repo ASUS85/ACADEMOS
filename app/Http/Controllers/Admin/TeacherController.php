@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Http\Request;
 use App\Models\Department;
 use App\Models\Filiere;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule; //
+use Illuminate\Support\Facades\Auth;
 
 class TeacherController extends Controller
 {
@@ -16,7 +19,7 @@ class TeacherController extends Controller
 
         $specialites = Filiere::where('department_id', $department->id)->get();
 
-        return view('admin.teachers.create', compact('department','specialites'));
+        return view('admin.teachers.create', compact('department', 'specialites'));
     }
 
 
@@ -97,5 +100,44 @@ class TeacherController extends Controller
         $teacher->delete();
 
         return back()->with('success', 'Supprimé');
+    }
+
+    public function showProfile()
+    {
+        $teacher = auth()->user()->load(['department', 'filiere', 'reports']);
+        return view('admin.teachers.profile', compact('teacher'));
+    }
+
+    // ✅ UPDATE PROFILE (CORRIGÉ)
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users')->ignore(auth()->id())
+            ],
+            'matricule' => 'nullable|string|max:50|unique:users,matricule,' . auth()->id(),
+            'specialite' => 'nullable|string|max:100',
+        ]);
+
+        auth()->user()->update($request->only(['name', 'email', 'matricule', 'specialite']));
+
+        return back()->with('success', '✅ Profil mis à jour avec succès');
+    }
+
+    // ✅ UPDATE PASSWORD
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'password' => ['required', 'confirmed', 'min:8'],
+        ]);
+
+        auth()->user()->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return back()->with('success', '✅ Mot de passe modifié avec succès');
     }
 }
