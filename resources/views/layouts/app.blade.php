@@ -193,6 +193,10 @@
                    <i class="fa fa-history"></i>
                     <span class="menu-text">Historique</span>
                 </a>
+                <a href="/profile">
+                   <i class="fa fa-gavel"></i>
+                    <span class="menu-text">Groupe de jury</span>
+                </a>
                 <a href="{{ url('/admin/profile') }}">
                     <i class="fa fa-user"></i>
                     <span class="menu-text">Profil</span>
@@ -208,6 +212,10 @@
                     <i class="fa fa-message"></i>
                     <span class="menu-text">Commentaires</span>
                 </a>
+                <a href="/profile">
+                   <i class="fa fa-gavel"></i>
+                    <span class="menu-text">Groupe de jury</span>
+                </a>
                 <a href="{{ url('/teacher/profile') }}">
                     <i class="fa fa-user"></i>
                     <span class="menu-text">Profil</span>
@@ -219,13 +227,13 @@
                     <i class="fa fa-file"></i>
                     <span class="menu-text">Mes Rapports</span>
                 </a>
-                <a href="/profile">
-                   <i class="fa fa-history"></i>
-                    <span class="menu-text">Historique</span>
-                </a>
                 <a href="/reports">
                     <i class="fa fa-message"></i>
                     <span class="menu-text">Commentaires</span>
+                </a>
+                <a href="/profile">
+                   <i class="fa fa-history"></i>
+                    <span class="menu-text">Historique</span>
                 </a>
                 <a href="{{ url('/teacher/profile') }}">
                     <i class="fa fa-user"></i>
@@ -266,8 +274,8 @@
                     <span class="menu-text">Profil</span>
                 </a>
                 <a href="/profile">
-                   <i class="fa fa-history"></i>
-                    <span class="menu-text">Profil</span>
+                   <i class="fa fa-gavel"></i>
+                    <span class="menu-text">Groupe de jury</span>
                 </a>
                 <a href="/profile">
                     <i class="fa fa-gear"></i>

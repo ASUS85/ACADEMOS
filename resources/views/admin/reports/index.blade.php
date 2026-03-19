@@ -258,7 +258,7 @@
 
                                         {{-- Actions principales --}}
                                         <div class="row g-2 mb-3">
-                                            <div class="col-6">
+                                            <div class="col-12">
                                                 @php
                                                     $adminDeptId = auth()->user()->department_id;
                                                     $teachersInDept = \App\Models\User::role('teacher')
@@ -281,22 +281,33 @@
                                                     {{ $report->teacher_id ? 'Changer' : 'Affecter' }}
                                                 </button>
                                             </div>
-                                            <div class="col-6">
-                                                <select id="jury_{{ $report->id }}"
-                                                    class="form-select form-select-sm">
-                                                    <option value="">Jury</option>
-                                                    @foreach (\App\Models\User::role('jury')->get() as $jury)
-                                                        <option value="{{ $jury->id }}"
-                                                            {{ $report->jury_id == $jury->id ? 'selected' : '' }}>
-                                                            {{ $jury->name }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                <button class="btn btn-purple btn-sm w-100 mt-1"
-                                                    onclick="assignJury({{ $report->id }})">
-                                                    <i class="fas fa-gavel"></i>
-                                                    {{ $report->jury_id ? 'Changer' : 'Jury' }}
+                                            <div class="col-12">
+                                                <button
+                                                    class="btn bg-success text-light btn-outline-purple btn-sm w-100"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#juryModal{{ $report->id }}"
+                                                    title="Sélectionner le jury">
+                                                    <i class="fas fa-gavel me-2"></i>
+                                                    @if ($report->juryMembers->isNotEmpty())
+                                                        <span class="badge bg-purple text-white rounded-pill ms-1">
+                                                            {{ $report->juryMembers->count() }}/4
+                                                        </span>
+                                                        {{ $report->juryPresident?->name ?? 'Jury' }}
+                                                    @else
+                                                        Affecter jury
+                                                    @endif
                                                 </button>
+                                                @if ($report->juryMembers->isNotEmpty())
+                                                    <div class="mt-1 small text-muted">
+                                                        <i
+                                                            class="fas fa-users me-1"></i>{{ $report->juryMembers->count() }}
+                                                        membre(s)
+                                                        @if ($report->juryPresident?->name)
+                                                            <br><small class="text-primary">👑
+                                                                {{ $report->juryPresident->name }}</small>
+                                                        @endif
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
 
@@ -410,6 +421,149 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                {{-- ⭐ MODAL SÉLECTION JURY --}}
+                                <div class="modal fade" id="juryModal{{ $report->id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-xl">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-gradient-purple border-0 text-white">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <div class="bg-white bg-opacity-20 p-3 rounded-3">
+                                                        <i class="fas fa-gavel fa-2x"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h5 class="modal-title mb-1 fw-bold">Sélectionner le jury</h5>
+                                                        <small>{{ Str::limit($report->title, 60) }}</small>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn-close btn-close-white"
+                                                    data-bs-dismiss="modal"></button>
+                                            </div>
+
+                                            <div class="modal-body p-0">
+                                                {{-- Filtres --}}
+                                                <div class="p-4 border-bottom bg-light">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-4">
+                                                            <select id="jury_dept_{{ $report->id }}"
+                                                                class="form-select form-select-sm">
+                                                                <option value="">Tous les départements</option>
+                                                                @foreach (\App\Models\Department::all() as $dept)
+                                                                    <option value="{{ $dept->id }}">
+                                                                        {{ $dept->name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <select id="jury_filiere_{{ $report->id }}"
+                                                                class="form-select form-select-sm">
+                                                                <option value="">Toutes spécialités</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="text"
+                                                                    id="jury_search_{{ $report->id }}"
+                                                                    class="form-control" placeholder="Rechercher...">
+                                                                <button class="btn btn-outline-secondary"
+                                                                    onclick="filterJury({{ $report->id }})">
+                                                                    <i class="fas fa-search"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                id="jury_show_all_{{ $report->id }}" checked>
+                                                            <label class="form-check-label small"
+                                                                for="jury_show_all_{{ $report->id }}">
+                                                                Inclure tous les enseignants (pas seulement jury)
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {{-- Tableau --}}
+                                                <div class="table-responsive" style="max-height: 500px;">
+                                                    <table class="table table-hover mb-0"
+                                                        id="juryTable{{ $report->id }}">
+                                                        <thead class="table-light sticky-top">
+                                                            <tr>
+                                                                <th><input type="checkbox"
+                                                                        id="selectAll_{{ $report->id }}"
+                                                                        onchange="toggleSelectAll({{ $report->id }})">
+                                                                </th>
+                                                                <th>Nom</th>
+                                                                <th>Département</th>
+                                                                <th>Spécialité</th>
+                                                                <th>Sexe</th>
+                                                                <th>Rôles</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (\App\Models\User::role(['teacher', 'jury'])->where('department_id', auth()->user()->department_id)->get() as $member)
+                                                                <tr data-name="{{ strtolower($member->name) }}"
+                                                                    data-dept="{{ $member->department_id }}"
+                                                                    data-filiere="{{ $member->filiere_id ?? 0 }}">
+                                                                    <td>
+                                                                        <input type="checkbox" class="jury-checkbox"
+                                                                            value="{{ $member->id }}"
+                                                                            data-name="{{ $member->name }}"
+                                                                            {{ $report->juryMembers->contains($member->id) ? 'checked' : '' }}>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="d-flex align-items-center">
+                                                                            <img src="https://ui-avatars.com/api/?name={{ $member->name }}&background=6f42c1&color=fff&size=32"
+                                                                                class="rounded-circle me-2"
+                                                                                width="32" height="32">
+                                                                            <strong>{{ $member->name }}</strong>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td>{{ $member->department?->name ?? '-' }}</td>
+                                                                    <td>{{ $member->filiere?->name ?? ($member->specialite ?? '-') }}
+                                                                    </td>
+                                                                    <td>
+                                                                        <span
+                                                                            class="badge bg-{{ $member->sexe == 'M' ? 'primary' : 'pink' }} text-white">
+                                                                            {{ $member->sexe == 'M' ? 'H' : 'F' }}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if ($member->hasRole('teacher'))
+                                                                            <span
+                                                                                class="badge bg-success text-white">Teacher</span>
+                                                                        @endif
+                                                                        @if ($member->hasRole('jury'))
+                                                                            <span
+                                                                                class="badge bg-info text-white">Jury</span>
+                                                                        @endif
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                {{-- Compteur sélection --}}
+                                                <div
+                                                    class="p-3 bg-light border-top d-flex justify-content-between align-items-center">
+                                                    <span id="juryCount_{{ $report->id }}"
+                                                        class="fw-bold text-purple">
+                                                        <span id="selectedCount_{{ $report->id }}">0</span>/4
+                                                        membres sélectionnés
+                                                    </span>
+                                                    <button class="btn btn-purple px-4"
+                                                        onclick="confirmJury({{ $report->id }})"
+                                                        id="confirmBtn_{{ $report->id }}" disabled>
+                                                        <i class="fas fa-check me-2"></i>Affecter jury
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         @endforeach
                     </div>
@@ -438,7 +592,7 @@
             const teacherId = document.getElementById(`teacher_${reportId}`).value;
             if (!teacherId) return showToast('Veuillez sélectionner un enseignant', 'danger');
 
-            fetch(`/reports/${reportId}/assign`, {
+            fetch(`{{ url('/reports') }}/${reportId}/assign`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -462,10 +616,12 @@
         }
 
         function assignJury(reportId) {
-            const juryId = document.getElementById(`jury_${reportId}`).value;
-            if (!juryId) return showToast('Veuillez sélectionner un jury', 'danger');
+            const juryIds = Array.from(document.querySelector(`#jury_${reportId}`).selectedOptions).map(opt => opt.value);
 
-            fetch(`/reports/${reportId}/assign-jury`, {
+            if (juryIds.length === 0) return showToast('Veuillez sélectionner au moins 1 juré', 'danger');
+            if (juryIds.length > 4) return showToast('Maximum 4 membres du jury', 'danger');
+
+            fetch(`{{ url('/reports') }}/${reportId}/assign-jury`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -473,7 +629,7 @@
                         'Accept': 'application/json'
                     },
                     body: JSON.stringify({
-                        jury_id: juryId
+                        jury_ids: juryIds
                     })
                 })
                 .then(res => res.json())
@@ -488,8 +644,122 @@
                 .catch(() => showToast('Erreur réseau', 'danger'));
         }
 
+
         function addComment(reportId) {
             showToast('Fonctionnalité en développement', 'info');
         }
+
+        // Limite select multiple à 4
+        document.querySelectorAll('select[multiple][data-max]').forEach(select => {
+            select.addEventListener('change', function() {
+                if (this.selectedOptions.length > this.dataset.max) {
+                    Array.from(this.selectedOptions)
+                        .slice(this.dataset.max)
+                        .forEach(option => option.selected = false);
+                    showToast(`Maximum ${this.dataset.max} membres`, 'warning');
+                }
+            });
+        });
+
+        // ⭐ JURY MODAL FUNCTIONS
+        let juryData_{{ $report->id }} = @json(\App\Models\User::role(['teacher', 'jury'])->where('department_id', auth()->user()->department_id)->get());
+
+        function filterJury(reportId) {
+            const dept = document.getElementById(`jury_dept_${reportId}`).value;
+            const filiere = document.getElementById(`jury_filiere_${reportId}`).value;
+            const search = document.getElementById(`jury_search_${reportId}`).value.toLowerCase();
+            const showAll = document.getElementById(`jury_show_all_${reportId}`).checked;
+
+            document.querySelectorAll(`#juryTable${reportId} tbody tr`).forEach(row => {
+                const name = row.dataset.name;
+                const deptId = row.dataset.dept;
+                const filiereId = row.dataset.filiere;
+
+                const matchesDept = !dept || deptId == dept;
+                const matchesFiliere = !filiere || filiereId == filiere;
+                const matchesSearch = !search || name.includes(search);
+                const matchesRole = showAll || row.querySelector('.badge.bg-info');
+
+                row.style.display = (matchesDept && matchesFiliere && matchesSearch && matchesRole) ? '' : 'none';
+            });
+            updateJuryCount(reportId);
+        }
+
+        function toggleSelectAll(reportId) {
+            const selectAll = document.getElementById(`selectAll_${reportId}`).checked;
+            document.querySelectorAll(`#juryModal${reportId} .jury-checkbox`).forEach(cb => {
+                if (selectAll && document.querySelectorAll(`#juryModal${reportId} .jury-checkbox:checked`).length <
+                    4) {
+                    cb.checked = true;
+                } else {
+                    cb.checked = false;
+                }
+            });
+            updateJuryCount(reportId);
+        }
+
+        function updateJuryCount(reportId) {
+            const count = document.querySelectorAll(`#juryModal${reportId} .jury-checkbox:checked`).length;
+            document.getElementById(`selectedCount_${reportId}`).textContent = count;
+            document.getElementById(`confirmBtn_${reportId}`).disabled = count === 0 || count > 4;
+        }
+
+        function confirmJury(reportId) {
+            const juryIds = Array.from(document.querySelectorAll(`#juryModal${reportId} .jury-checkbox:checked`)).map(cb =>
+                cb.value);
+
+            if (juryIds.length > 4) {
+                showToast('Maximum 4 membres du jury', 'danger');
+                return;
+            }
+
+            fetch(`{{ url('/reports') }}/${reportId}/assign-jury`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        jury_ids: juryIds
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message);
+                        bootstrap.Modal.getInstance(document.getElementById(`juryModal${reportId}`)).hide();
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message || 'Erreur', 'danger');
+                    }
+                })
+                .catch(() => showToast('Erreur réseau', 'danger'));
+        }
+
+        // Event listeners pour chaque modal jury
+        document.querySelectorAll('[id^="juryModal"]').forEach(modal => {
+            const reportId = modal.id.match(/juryModal(\d+)/)[1];
+
+            // Filtres
+            document.getElementById(`jury_dept_${reportId}`)?.addEventListener('change', () => filterJury(
+            reportId));
+            document.getElementById(`jury_search_${reportId}`)?.addEventListener('keyup', () => filterJury(
+                reportId));
+            document.getElementById(`jury_show_all_${reportId}`)?.addEventListener('change', () => filterJury(
+                reportId));
+
+            // Checkboxes
+            modal.querySelectorAll('.jury-checkbox').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (document.querySelectorAll(`#juryModal${reportId} .jury-checkbox:checked`)
+                        .length > 4) {
+                        cb.checked = false;
+                        showToast('Maximum 4 membres', 'warning');
+                    }
+                    updateJuryCount(reportId);
+                });
+            });
+        });
     </script>
 </x-app-layout>

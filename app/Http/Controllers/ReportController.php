@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class ReportController extends Controller
 {
@@ -161,17 +162,86 @@ class ReportController extends Controller
     /**
      * Affecter un rapport à un jury
      */
+    /**
+     * Affecter un jury (1-4 membres) à un rapport
+     */
     public function assignJury(Request $request, Report $report)
     {
-        $request->validate(['jury_id' => 'required|exists:users,id']);
+        $request->validate([
+            'jury_ids' => ['required', 'array', 'min:1', 'max:4'],
+            'jury_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $juryIds = array_filter($request->jury_ids);
+
+        // Vérifier encadreur
+        if ($report->teacher_id && in_array($report->teacher_id, $juryIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => "❌ L'encadreur ne peut pas faire partie du jury."
+            ], 422);
+        }
+
+        // Vérifier rôles
+        $members = User::whereIn('id', $juryIds)
+            ->where(function ($query) {
+                $query->whereHas('roles', function ($q) {
+                    $q->where('name', 'teacher');
+                })->orWhereHas('roles', function ($q) {
+                    $q->where('name', 'jury');
+                });
+            })
+            ->get();
+
+        if ($members->count() !== count($juryIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => "❌ Certains membres n'ont pas le rôle 'teacher' ou 'jury'."
+            ], 422);
+        }
+
+        // ✅ ÇA MARCHE MAINTENANT !
+        $report->juryMembers()->detach();
+
+        $presidentId = $juryIds[0];
+        foreach ($juryIds as $index => $userId) {
+            $report->juryMembers()->attach((int)$userId, [
+                'is_president' => ($index === 0)
+            ]);
+        }
 
         $report->update([
-            'jury_id' => $request->jury_id,
+            'jury_id' => $presidentId,
             'status' => 'En attente jury'
         ]);
 
-        return redirect()->back()->with('success', '✅ Rapport affecté au jury !');
+        return response()->json([
+            'success' => true,
+            'message' => "✅ Jury affecté ! (" . count($juryIds) . " membre(s))"
+        ]);
     }
+
+
+
+
+
+    /**
+     * Récupérer les membres du jury pour un rapport (AJAX)
+     */
+    public function getJuryMembers(Report $report)
+    {
+        $jury = $report->juryMembers()->get();
+        return response()->json($jury->map(function ($member) {
+            return [
+                'id' => $member->id,
+                'name' => $member->name,
+                'is_president' => $member->pivot->is_president,
+                'roles' => $member->getRoleNames()->toArray()
+            ];
+        }));
+    }
+
+
 
     /**
      * Dashboard jury

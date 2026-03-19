@@ -5,16 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles; // Bien présent !
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles; // On regroupe les traits ici
+    use HasFactory, Notifiable, HasRoles;
 
-    /**
-     * Les attributs assignables en masse.
-     */
     protected $fillable = [
         'name',
         'email',
@@ -22,11 +19,11 @@ class User extends Authenticatable
         'matricule',
         'grade',
         'department_id',
-        'filiere_id',    // Ajouté : nécessaire pour tes étudiants
-        'specialite',    // Utilisé pour les enseignants ou comme libellé
+        'filiere_id',
+        'specialite',
         'sexe',
-        'role_name',     // Ajouté : pour stocker le nom du rôle en clair
-        'niveau',        // Ajouté : utile pour distinguer Niveau 1, 2, 3, etc.
+        'role_name',
+        'niveau',
     ];
 
     protected $hidden = [
@@ -43,40 +40,52 @@ class User extends Authenticatable
     }
 
     // --- RELATIONS ---
-
     public function department()
     {
         return $this->belongsTo(Department::class);
     }
 
-    /**
-     * Relation vers la filière (pour les étudiants)
-     */
     public function filiere()
     {
-        // On utilise 'filiere_id' qui est la clé étrangère standard
         return $this->belongsTo(Filiere::class, 'filiere_id');
     }
 
-    /**
-     * Pour les enseignants qui gèrent plusieurs filières
-     */
     public function filieres()
     {
         return $this->belongsToMany(Filiere::class, 'teacher_filiere');
     }
 
+    // Étudiant : rapports soumis
     public function reports()
     {
         return $this->hasMany(Report::class, 'student_id');
     }
 
+    // ⭐ Enseignant : rapports encadrés
     public function assignedReports()
     {
         return $this->hasMany(Report::class, 'teacher_id');
     }
 
+    // ⭐ NOUVEAU : Enseignant/Juré : rapports où je suis juré (table pivot)
     public function juryReports()
+    {
+        return $this->belongsToMany(Report::class, 'jury_report')
+            ->withPivot('is_president')
+            ->withTimestamps()
+            ->orderBy('pivot_is_president', 'desc');
+    }
+
+    // ⭐ NOUVEAU : Président du jury uniquement
+    public function juryPresidentReports()
+    {
+        return $this->belongsToMany(Report::class, 'jury_report')
+            ->wherePivot('is_president', true)
+            ->withTimestamps();
+    }
+
+    // Ancienne relation jury_id (legacy, à garder pour compatibilité)
+    public function legacyJuryReports()
     {
         return $this->hasMany(Report::class, 'jury_id');
     }
