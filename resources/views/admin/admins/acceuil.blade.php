@@ -75,8 +75,7 @@
     if (request()->filled('search')) {
         $search = request('search');
         $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%$search%")
-              ->orWhere('matricule', 'like', "%$search%");
+            $q->where('name', 'like', "%$search%")->orWhere('matricule', 'like', "%$search%");
         });
     }
 
@@ -520,32 +519,36 @@
 {{-- Scripts --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-   document.addEventListener("DOMContentLoaded", function() {
-    const ctx = document.getElementById('reportChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ["Soumis", "Affecté", "Évalué", "Validé"],
-            datasets: [{
-                data: [
-                    {{ $submittedCount }},
-                    {{ $assignedCount }},
-                    {{ $evaluatedCount }},
-                    {{ $validatedCount }}
-                ],
-                backgroundColor: ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display:false } },
-            cutout: '0%'
-        }
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('reportChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ["Soumis", "Affecté", "Évalué", "Validé"],
+                datasets: [{
+                    data: [
+                        {{ $submittedCount }},
+                        {{ $assignedCount }},
+                        {{ $evaluatedCount }},
+                        {{ $validatedCount }}
+                    ],
+                    backgroundColor: ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                cutout: '0%'
+            }
+        });
     });
-});
 
 
     // Pagination AJAX
@@ -596,100 +599,228 @@
     }
 
     function openReportModal(student, reports) {
-        document.getElementById('student_name_display_modal').innerText = student.name;
+        let report = reports[0]; // dernier rapport
 
-        // Liste des rapports
-        let reportHtml = '';
-        reports.forEach(report => {
-            reportHtml += `
-                <div class="p-3 bg-white rounded-4 shadow-sm border mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="fw-bold mb-1">${report.title ?? 'Rapport'}</p>
-                            <small class="text-muted">${report.status ?? ''}</small>
-                        </div>
-                        <a href="/storage/${report.file_path}" target="_blank"
-                           class="btn btn-sm btn-danger rounded-pill px-3">
-                            PDF
-                        </a>
+        if (!report) {
+            document.getElementById('reports_list').innerHTML =
+                '<p class="text-muted">Aucun rapport</p>';
+            return;
+        }
+
+        // =======================
+        // 📄 AFFICHAGE RAPPORT
+        // =======================
+        document.getElementById('reports_list').innerHTML = `
+        <div class="p-3 bg-white rounded shadow-sm">
+            <b>${report.title ?? 'Rapport'}</b><br>
+            <small class="text-muted">${report.status}</small>
+        </div>
+    `;
+
+        // =======================
+        // 👨‍🏫 ENCADREUR
+        // =======================
+        let teacherHTML = '';
+
+        if (!report.teacher_id) {
+
+            // PAS ENCORE ASSIGNÉ
+            teacherHTML += `
+            <tr>
+                <td colspan="2">
+                    <select id="teacher_select" class="form-select">
+                        ${allTeachers.map(t =>
+                            `<option value="${t.id}">${t.name}</option>`
+                        ).join('')}
+                    </select>
+
+                    <button class="btn btn-success btn-sm mt-2 w-100"
+                        onclick="assignTeacher(${report.id})">
+                        Affecter encadreur
+                    </button>
+                </td>
+            </tr>
+            `;
+
+        } else {
+
+            // DÉJÀ ASSIGNÉ
+            teacherHTML += `
+            <tr>
+                <td>
+                    <span class="badge bg-success mb-2">
+                        ${report.teacher?.name ?? 'Encadreur'}
+                    </span>
+
+                    <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-warning btn-sm w-50"
+                            onclick="reassignTeacher(${report.id})">
+                            🔁 Réassigner
+                        </button>
+
+                        <button class="btn btn-danger btn-sm w-50"
+                            onclick="removeTeacher(${report.id})">
+                            ❌ Retirer
+                        </button>
                     </div>
-                </div>`;
-        });
-        document.getElementById('reports_list').innerHTML = reportHtml || '<p class="text-muted">Aucun rapport.</p>';
 
-        // Enseignants
-        let tBody = '';
-        allTeachers.forEach(t => {
-            tBody += `
-                <tr>
-                    <td>
-                        <img src="https://ui-avatars.com/api/?name=${t.name}&size=30"
-                             class="rounded-circle me-2">
-                        <b>${t.name}</b>
-                    </td>
-                    <td class="text-end">
-                        <button onclick="processAssignment(${reports[0]?.id ?? 0}, ${t.id}, 'teacher')"
-                                class="btn btn-sm btn-outline-success rounded-pill px-3">
-                            Affecter
-                        </button>
-                    </td>
-                </tr>`;
-        });
-        document.getElementById('teachers_table_body').innerHTML = tBody;
+                    <div id="reassign_section_${report.id}" class="mt-2 d-none">
+                        <select id="teacher_select_${report.id}" class="form-select mb-2">
+                            ${allTeachers.map(t =>
+                                `<option value="${t.id}">${t.name}</option>`
+                            ).join('')}
+                        </select>
 
-        // Juries
-        let jBody = '';
-        allJuries.forEach(j => {
-            jBody += `
-                <tr>
-                    <td>
-                        <i class="fas fa-user-shield me-2" style="color:var(--purple);"></i>
-                        <b>${j.name}</b>
-                    </td>
-                    <td class="text-end">
-                        <button onclick="processAssignment(${reports[0]?.id ?? 0}, ${j.id}, 'jury')"
-                                class="btn btn-sm border rounded-pill px-3"
-                                style="border-color:var(--purple);color:var(--purple);">
-                            Désigner
+                        <button class="btn btn-primary btn-sm w-100"
+                            onclick="confirmReassign(${report.id})">
+                            Confirmer
                         </button>
-                    </td>
-                </tr>`;
-        });
-        document.getElementById('juries_table_body').innerHTML = jBody;
+                    </div>
+                </td>
+            </tr>
+            `;
+        }
+
+        document.getElementById('teachers_table_body').innerHTML = teacherHTML;
+
+        // =======================
+        // ⚖️ JURY
+        // =======================
+        let juryHTML = '';
+
+        if (report.teacher_status === "Validé par enseignant" && !report.jury_id) {
+
+            juryHTML += `
+            <tr>
+                <td colspan="2">
+                    <select id="jury_select" class="form-select">
+                        ${allJuries.map(j =>
+                            `<option value="${j.id}">${j.name}</option>`
+                        ).join('')}
+                    </select>
+                    <button class="btn btn-outline-purple btn-sm mt-2 w-100"
+                        onclick="assignJury(${report.id})">
+                        Assigner jury
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        } else if (report.jury_id) {
+
+            juryHTML += `
+            <tr>
+                <td>
+                    <span class="badge bg-success">
+                        Jury assigné
+                    </span>
+                </td>
+            </tr>
+        `;
+
+        } else {
+
+            juryHTML += `
+            <tr>
+                <td class="text-muted">⏳ En attente validation enseignant</td>
+            </tr>
+        `;
+        }
+
+        document.getElementById('juries_table_body').innerHTML = juryHTML;
 
         new bootstrap.Modal(document.getElementById('reportDetailsModal')).show();
     }
 
-    function processAssignment(reportId, userId, type) {
-        if (!reportId) return;
-        let url = type === 'teacher' ? `/reports/${reportId}/assign` : `/reports/${reportId}/assign-jury`;
-        let data = type === 'teacher' ? {
-            teacher_id: userId
-        } : {
-            jury_id: userId
-        };
+    function assignTeacher(reportId) {
+        let teacherId = document.getElementById('teacher_select').value;
 
-        fetch(url, {
+        fetch(`{{ url('/reports') }}/${reportId}/assign`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    teacher_id: teacherId
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast("Encadreur assigné avec succès", "success");
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    showToast("Erreur lors de l'affectation", "danger");
+                }
+            })
+            .catch((err) => {
+                showToast("Erreur serveur", "danger");
+                console.log("ERRR", err);
+            });
+    }
+
+    function assignJury(reportId) {
+        let juryId = document.getElementById('jury_select').value;
+
+        fetch(`/reports/${reportId}/assign-jury`, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify({
+                jury_id: juryId
+            })
         }).then(() => {
-            showToast(`Affectation ${type === 'teacher' ? "de l'encadreur" : 'du jury'} réussie !`);
+            showToast("Jury assigné avec succès");
             setTimeout(() => location.reload(), 1200);
         });
     }
 
-    function showToast(message) {
+    function reassignTeacher(reportId) {
+        document.getElementById(`reassign_section_${reportId}`).classList.toggle('d-none');
+    }
+
+    function removeTeacher(reportId) {
+
+        if (!confirm("Retirer cet encadreur ?")) return;
+
+        fetch(`{{ url('/reports') }}/${reportId}/remove-teacher`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast("Encadreur retiré avec succès");
+                    setTimeout(() => location.reload(), 1000);
+                }
+            });
+    }
+
+    function showToast(message, type = "success") {
+
+        let bg = type === "success" ?
+            "bg-success-subtle text-success" :
+            "bg-danger-subtle text-danger";
+
         const toast = document.createElement('div');
         toast.className =
-            'position-fixed top-0 end-0 m-4 p-3 bg-dark text-white rounded-3 shadow-lg animate__animated';
+            `position-fixed top-0 end-0 m-4 px-4 py-3 rounded-3 shadow-sm ${bg}`;
         toast.style.zIndex = "9999";
-        toast.innerHTML = `<i class="fas fa-check-circle text-success me-2"></i> ${message}`;
+
+        toast.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        ${message}
+    `;
+
         document.body.appendChild(toast);
+
         setTimeout(() => toast.remove(), 3000);
     }
 </script>

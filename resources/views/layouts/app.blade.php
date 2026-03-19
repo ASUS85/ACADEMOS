@@ -48,7 +48,7 @@
         }
 
         .sidebar.expanded {
-            width: 185px;
+            width: 200px;
         }
 
         /* Style du bouton Toggle */
@@ -113,7 +113,7 @@
 
         .content-area {
             margin-top: 60px;
-            margin-left: 40px;
+            margin-left: 80px;
             padding: 30px;
             transition: margin-left 0.3s;
         }
@@ -140,7 +140,7 @@
             align-items: center;
             padding: 15px;
             transition: all 0.2s;
-            text-align: left;
+            text-align: center;
         }
 
         .logout-btn:hover {
@@ -185,6 +185,14 @@
                     <i class="fa fa-users"></i>
                     <span class="menu-text">Utilisateurs</span>
                 </a>
+                <a href="/reports">
+                    <i class="fa fa-message"></i>
+                    <span class="menu-text">Commentaires</span>
+                </a>
+                <a href="/profile">
+                   <i class="fa fa-history"></i>
+                    <span class="menu-text">Historique</span>
+                </a>
                 <a href="{{ url('/admin/profile') }}">
                     <i class="fa fa-user"></i>
                     <span class="menu-text">Profil</span>
@@ -196,6 +204,10 @@
                     <i class="fa fa-file"></i>
                     <span class="menu-text">Rapports</span>
                 </a>
+                <a href="/reports">
+                    <i class="fa fa-message"></i>
+                    <span class="menu-text">Commentaires</span>
+                </a>
                 <a href="{{ url('/teacher/profile') }}">
                     <i class="fa fa-user"></i>
                     <span class="menu-text">Profil</span>
@@ -206,6 +218,14 @@
                 <a href="/reports">
                     <i class="fa fa-file"></i>
                     <span class="menu-text">Mes Rapports</span>
+                </a>
+                <a href="/profile">
+                   <i class="fa fa-history"></i>
+                    <span class="menu-text">Historique</span>
+                </a>
+                <a href="/reports">
+                    <i class="fa fa-message"></i>
+                    <span class="menu-text">Commentaires</span>
                 </a>
                 <a href="{{ url('/teacher/profile') }}">
                     <i class="fa fa-user"></i>
@@ -226,6 +246,10 @@
                     <i class="fa fa-file"></i>
                     <span class="menu-text">Rapports</span>
                 </a>
+                <a href="/reports">
+                    <i class="fa fa-light fa-message"></i>
+                    <span class="menu-text">Commentaires</span>
+                </a>
 
                 {{-- <a href="/students">
                     <i class="fa fa-user-graduate"></i>
@@ -242,7 +266,7 @@
                     <span class="menu-text">Profil</span>
                 </a>
                 <a href="/profile">
-                    <i class="fa fa-users"></i>
+                   <i class="fa fa-history"></i>
                     <span class="menu-text">Profil</span>
                 </a>
                 <a href="/profile">
@@ -257,7 +281,7 @@
 
         <div class="mt-auto-custom">
             <button type="button" class="logout-btn" data-bs-toggle="modal" data-bs-target="#logoutModal">
-                <i class="fa fa-right-from-bracket text-danger"></i>
+                <i class="fa fa-power-off" style="font-size: 18px; min-width: 40px;"></i>
                 <span class="menu-text">Déconnexion</span>
             </button>
         </div>

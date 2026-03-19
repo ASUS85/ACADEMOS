@@ -82,7 +82,7 @@
                                         <i class="fas fa-id-badge text-primary fs-4 me-3"></i>
                                         <div>
                                             <label class="fw-bold text-muted small mb-1 d-block">Rôle</label>
-                                            <span class="badge bg-success bg-opacity-20 text-success border border-success px-4 py-2 fs-6">
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success px-4 py-2 fs-6">
                                                 Administrateur
                                             </span>
                                         </div>

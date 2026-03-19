@@ -188,6 +188,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/reports/{report}/teacher-comment', [ReportController::class, 'teacherComment'])->name('reports.teacher-comment');
     Route::post('/reports/{report}/assign-jury', [ReportController::class, 'assignJury'])->name('reports.assign-jury');
     Route::post('/reports/{report}/jury-evaluate', [ReportController::class, 'juryEvaluate'])->name('reports.jury-evaluate');
+    Route::post('/reports/{report}/remove-teacher', [ReportController::class, 'removeTeacher']);
 
     //Action filière
 
