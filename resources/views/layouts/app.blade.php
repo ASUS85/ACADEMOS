@@ -185,15 +185,11 @@
                     <i class="fa fa-users"></i>
                     <span class="menu-text">Utilisateurs</span>
                 </a>
-                <a href="/reports">
-                    <i class="fa fa-message"></i>
-                    <span class="menu-text">Commentaires</span>
+                <a href="{{ url('/admin/reports') }}">
+                    <i class="fa fa-file"></i>
+                    <span class="menu-text">Rapports</span>
                 </a>
-                <a href="/profile">
-                   <i class="fa fa-history"></i>
-                    <span class="menu-text">Historique</span>
-                </a>
-                <a href="/profile">
+                <a href="{{ url('/admin/juries') }}">
                    <i class="fa fa-gavel"></i>
                     <span class="menu-text">Groupe de jury</span>
                 </a>
@@ -235,30 +231,21 @@
                    <i class="fa fa-history"></i>
                     <span class="menu-text">Historique</span>
                 </a>
-                <a href="{{ url('/teacher/profile') }}">
+                <a href="{{ url('/student/profile') }}">
                     <i class="fa fa-user"></i>
                     <span class="menu-text">Profil</span>
                 </a>
             @break
 
             @case('superadmin')
-                <a href="{{ url('/admin/users') }}">
+                <a href="{{ url('/superadmin/users') }}">
                     <i class="fa fa-users"></i>
                     <span class="menu-text">Utilisateurs</span>
-                </a>
-                <a href="{{ url('/admin/profile') }}">
-                    <i class="fa fa-user"></i>
-                    <span class="menu-text">Profil</span>
                 </a>
                 <a href="/reports">
                     <i class="fa fa-file"></i>
                     <span class="menu-text">Rapports</span>
                 </a>
-                <a href="/reports">
-                    <i class="fa fa-light fa-message"></i>
-                    <span class="menu-text">Commentaires</span>
-                </a>
-
                 {{-- <a href="/students">
                     <i class="fa fa-user-graduate"></i>
                     <span class="menu-text">Étudiants</span>
@@ -269,16 +256,17 @@
                     <span class="menu-text">Enseignants</span>
                 </a> --}}
 
-                <a href="/profile">
-                    <i class="fa fa-user"></i>
-                    <span class="menu-text">Profil</span>
-                </a>
+
                 <a href="/profile">
                    <i class="fa fa-gavel"></i>
                     <span class="menu-text">Groupe de jury</span>
                 </a>
                 <a href="/profile">
                     <i class="fa fa-gear"></i>
+                    <span class="menu-text">Paramètres</span>
+                </a>
+                <a href="/profile">
+                    <i class="fa fa-user"></i>
                     <span class="menu-text">Profil</span>
                 </a>
             @break

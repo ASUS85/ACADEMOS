@@ -135,7 +135,7 @@
     <div class="modal fade" id="editProfileModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content rounded-4 shadow-lg">
-                <form method="POST" action="{{ route('profile.update') }}">
+                <form method="POST" action="{{ url('admin/profile') }}">
                     @csrf
                     @method('PATCH')
                     <div class="modal-header bg-primary text-white rounded-top-4">

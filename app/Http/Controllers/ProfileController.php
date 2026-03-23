@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
-
+use Illuminate\Support\Facades\Hash;
 class ProfileController extends Controller
 {
     /**
@@ -35,6 +35,20 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    public function updateUser(ProfileUpdateRequest $request): RedirectResponse
+    {
+        $request->user()->fill($request->validated());
+
+        if ($request->user()->isDirty('email')) {
+            $request->user()->email_verified_at = null;
+        }
+
+        $request->user()->save();
+
+        //return Redirect::route('admin.admins.profile')->with('status', 'profile-updated');
+       return back()->with('success', 'Profil mis à jour avec succès ✅');
     }
 
     /**
@@ -79,5 +93,16 @@ class ProfileController extends Controller
         ]);
 
         return back()->with('success', 'Mot de passe mis à jour avec succès !');
+    }
+
+
+     public function studentProfile()
+    {
+        if (!auth()->user()->hasAnyRole(['student'])) {
+            abort(403);
+        }
+
+        $user = auth()->user()->load('department');
+        return view('student.profil', compact('user'));
     }
 }

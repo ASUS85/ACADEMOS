@@ -6,6 +6,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\SuperAdmin\UserController;
+use App\Http\Controllers\Admin\JuryController;
 use App\Models\Filiere;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ Route::get('/dashboard', function (Request $request) {
     if ($user->hasAnyRole(['admin', 'superadmin'])) {
         $query = User::role('student')
             ->where('department_id', $adminDepartment)
+            ->whereHas('reports')
             ->with(['filiere', 'reports.teacher']);
 
         if ($request->filled('search')) {
@@ -48,9 +50,10 @@ Route::get('/dashboard', function (Request $request) {
         });
 
         $reportsCount = (clone $reportsQuery)->count();
-        $validatedCount = (clone $reportsQuery)->where('status', 'Validé final')->count();
-        $modifiedCount = (clone $reportsQuery)->where('status', 'modifié')->count();
+        $validatedCount = (clone $reportsQuery)->where('status', 'Validé')->count();
+        $assignedCount = (clone $reportsQuery)->where('status', 'Affecté')->count();
         $commentedCount = (clone $reportsQuery)->where('status', 'commenté')->count();
+        $submittedCount = (clone $reportsQuery)->where('status', 'Soumis')->count();
 
         return view('dashboard', compact(
             'students',
@@ -58,8 +61,9 @@ Route::get('/dashboard', function (Request $request) {
             'teachersCount',
             'reportsCount',
             'validatedCount',
-            'modifiedCount',
-            'commentedCount'
+            'assignedCount',
+            'commentedCount',
+            'submittedCount'
         ));
     }
 
@@ -87,10 +91,17 @@ Route::get('/dashboard', function (Request $request) {
 
         // Pour les stats, on récupère le total sans la pagination pour les compteurs
         $allReports = Report::where('teacher_id', $user->id)->get();
+
         $stats = [
-            'pending' => $allReports->where('status', 'En attente')->count(),
-            'validated' => $allReports->where('status', 'Validé')->count(),
-            'finished' => $allReports->where('status', 'Validé final')->count(),
+            'pending' => $allReports->whereIn('status', [
+                Report::STATUS_SUBMITTED,
+                Report::STATUS_COMMENTED,
+                Report::STATUS_ASSIGNED
+            ])->count(),
+
+            'validated' => $allReports->where('status', Report::STATUS_VALIDATED)->count(),
+
+            'finished' => $allReports->where('status', Report::STATUS_FINAL)->count(),
         ];
 
         $filieres = Filiere::where('department_id', $user->department_id)->get();
@@ -113,6 +124,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
         Route::get('/dashboard', [ReportController::class, 'studentDashboard'])->name('dashboard');
         Route::post('/reports/{report}/resubmit', [ReportController::class, 'resubmit'])->name('resubmit');
+        Route::patch('/update', [ProfileController::class, 'updateUser'])->name('student.update');
+        Route::get('/profile', [ProfileController::class, 'studentProfile'])->name('profile.student');
     });
 
     // SUPERADMIN (avec middleware role)
@@ -141,7 +154,7 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/admins', [UserController::class, 'adminsIndex'])->name('admins.index');
             Route::get('/admins/{user}/edit', [UserController::class, 'editAdmin'])->name('admins.edit');
-            Route::patch('/admins/{user}', [UserController::class, 'updateAdmin'])->name('admins.update');
+            Route::patch('/admins/{user}', [ProfileController::class, 'updateUser'])->name('admins.update');
             Route::delete('/admins/{user}', [UserController::class, 'destroyAdmin'])->name('admins.destroy');
             Route::get('/admins/create', [UserController::class, 'createAdmin'])->name('admins.create');
             Route::post('/admins', [UserController::class, 'storeAdmin'])->name('admins.store');
@@ -166,12 +179,14 @@ Route::middleware('auth')->group(function () {
             Route::get('/teachers/{teacher}/edit', [TeacherController::class, 'update'])->name('teachers.edit');
             Route::delete('/teachers/{teacher}', [TeacherController::class, 'destroy'])->name('teachers.destroy');
             Route::get('/profile', [ProfileController::class, 'adminProfile'])->name('profile.admin');
+            Route::resource('/juries', JuryController::class);
+            Route::patch('/update', [ProfileController::class, 'updateUser'])->name('admin.update');
         });
 
 
 
     // ENSEIGNANT
-     Route::prefix('teacher')->name('teacher.')->middleware('role:teacher')->group(function () {
+    Route::prefix('teacher')->name('teacher.')->middleware('role:teacher')->group(function () {
         Route::get('/profile', [TeacherController::class, 'showProfile'])->name('profile');
         Route::patch('/profile', [TeacherController::class, 'updateProfile'])->name('profile.update');
         Route::post('/profile/password', [TeacherController::class, 'updatePassword'])->name('profile.password');
@@ -193,5 +208,4 @@ Route::middleware('auth')->group(function () {
     //Action filière
 
 });
-
 require __DIR__ . '/auth.php';

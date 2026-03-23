@@ -18,7 +18,8 @@
                     <div class="col-md-6 ps-md-4">
                         <h6 class="text-primary fw-bold mb-3">Dernière Version</h6>
                         <p class="small text-muted mb-3">{{ $report->title }}</p>
-                        <a href="{{ asset('storage/' . $report->file_path) }}" target="_blank" class="btn btn-primary w-100 mb-2">
+                        <a href="{{ asset('storage/' . $report->file_path) }}" target="_blank"
+                            class="btn btn-primary w-100 mb-2">
                             <i class="fa fa-file-pdf me-2"></i> Télécharger le rapport
                         </a>
                     </div>
@@ -28,13 +29,28 @@
 
                 <form action="{{ route('reports.teacher-comment', $report->id) }}" method="POST">
                     @csrf
+
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-uppercase">Commentaires & Instructions</label>
-                        <textarea name="comment" class="form-control bg-light" rows="3" placeholder="Laissez vos remarques ici...">{{ $report->teacher_comment }}</textarea>
+                        <label class="form-label fw-bold small text-uppercase">
+                            Commentaires & Instructions
+                        </label>
+
+                        <textarea name="comment" class="form-control bg-light @error('comment') is-invalid @enderror" rows="3"
+                            placeholder="Laissez vos remarques ici..." required>{{ old('comment', $report->teacher_comment) }}</textarea>
+
+                        @error('comment')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
+
                     <div class="d-flex gap-2">
-                        <button type="submit" name="action" value="commenter" class="btn btn-warning flex-grow-1">Demander correction</button>
-                        <button type="submit" name="action" value="valider" class="btn btn-success flex-grow-1">Valider le rapport</button>
+                        <button type="submit" name="action" value="commenter" class="btn btn-warning flex-grow-1">
+                            Demander correction
+                        </button>
+
+                        <button type="submit" name="action" value="valider" class="btn btn-success flex-grow-1">
+                            Valider le rapport
+                        </button>
                     </div>
                 </form>
             </div>

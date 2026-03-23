@@ -119,14 +119,32 @@ class ReportController extends Controller
      */
     public function teacherComment(Request $request, Report $report)
     {
-        $request->validate(['comment' => 'required|string|max:1000']);
-
-        $report->update([
-            'teacher_comment' => $request->comment,
-            'teacher_status' => 'Validé par enseignant'
+        $request->validate([
+            'comment' => 'required|string|max:1000',
+            'action' => 'required|in:commenter,valider'
         ]);
 
-        return redirect()->back()->with('success', '✅ Commentaire ajouté et rapport validé !');
+        // Enregistrer le commentaire
+        \App\Models\Comment::create([
+            'report_id' => $report->id,
+            'user_id' => auth()->id(),
+            'comment' => $request->comment,
+        ]);
+
+        // Gestion action
+        if ($request->action === 'valider') {
+            $report->update([
+                'status' => Report::STATUS_VALIDATED // ✅ mieux avec constante
+            ]);
+
+            return back()->with('success', '✅ Rapport validé avec succès');
+        }
+
+        $report->update([
+            'status' => 'commenté'
+        ]);
+
+        return back()->with('success', '✅ Demande de correction envoyée');
     }
 
     /**
@@ -292,10 +310,37 @@ class ReportController extends Controller
     /**
      * Index administrateur
      */
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
-        $reports = Report::with('student')->latest()->get();
-        return view('admin.reports.index', compact('reports'));
+        $user = auth()->user();
+
+        $query = Report::with(['student.filiere', 'teacher', 'comments.user', 'juryGroup.members', 'juryMembers']);
+
+        // Filtre département admin
+        $query->whereHas('student', function ($q) use ($user) {
+            $q->where('department_id', $user->department_id);
+        });
+
+        // Filtre filière
+        if ($request->filled('filiere')) {
+            $query->whereHas('student', function ($q) use ($request) {
+                $q->where('filiere_id', $request->filiere);
+            });
+        }
+
+        // Filtre niveau
+        if ($request->filled('level')) {
+            $query->whereHas('student', function ($q) use ($request) {
+                $q->where('level', $request->level);
+            });
+        }
+
+        $reports = $query->latest()->withCount('comments')->paginate(10)->withQueryString();
+
+        // récupérer filières du département
+        $filieres = \App\Models\Filiere::where('department_id', $user->department_id)->get();
+
+        return view('admin.reports.index', compact('reports', 'filieres'));
     }
 
     public function superadminReports()

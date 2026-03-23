@@ -49,42 +49,6 @@
     }
 </style>
 
-@php
-    $user = auth()->user();
-    $adminDepartment = $user->department_id;
-
-    $studentsCount = \App\Models\User::role('student')->where('department_id', $adminDepartment)->count();
-
-    $teachersCount = \App\Models\User::role('teacher')->where('department_id', $adminDepartment)->count();
-
-    $reportsQuery = \App\Models\Report::whereHas('student', function ($q) use ($adminDepartment) {
-        $q->where('department_id', $adminDepartment);
-    });
-
-    $totalReports = (clone $reportsQuery)->count();
-    $submittedCount = (clone $reportsQuery)->where('status', 'Soumis')->count();
-    $assignedCount = (clone $reportsQuery)->where('status', 'Affecté')->count();
-    $evaluatedCount = (clone $reportsQuery)->where('status', 'Évalué')->count();
-    $validatedCount = (clone $reportsQuery)->where('status', 'Validé final')->count();
-
-    $query = \App\Models\User::role('student')
-        ->where('department_id', $adminDepartment)
-        ->whereHas('reports')
-        ->with(['filiere', 'reports.teacher']);
-
-    if (request()->filled('search')) {
-        $search = request('search');
-        $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%$search%")->orWhere('matricule', 'like', "%$search%");
-        });
-    }
-
-    $students = $query->latest()->paginate(10)->withQueryString();
-@endphp
-
-
-
-
 
 <div class="bg-light py-3 px-3 px-md-4">
     <div class="mb-4">
@@ -179,7 +143,7 @@
                                 </div>
                                 <div class="d-flex align-items-center mb-2 p-2 border rounded-pill">
                                     <span class="legend-dot me-2" style="background:#6da8e3;"></span>
-                                    <span>Évalués: <strong>{{ $evaluatedCount }}</strong></span>
+                                    <span>Évalués: <strong>{{ $commentedCount }}</strong></span>
                                 </div>
                                 <div class="d-flex align-items-center mb-2 p-2 border rounded-pill">
                                     <span class="legend-dot me-2" style="background:#4cc38a;"></span>
@@ -528,8 +492,8 @@
                 datasets: [{
                     data: [
                         {{ $submittedCount }},
-                        {{ $assignedCount }},
-                        {{ $evaluatedCount }},
+                        {{ $assignedCount ?? 0 }},
+                        {{ $commentedCount }},
                         {{ $validatedCount }}
                     ],
                     backgroundColor: ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],

@@ -9,6 +9,16 @@ class Report extends Model
 {
     use HasFactory;
 
+    const STATUS_SUBMITTED = 'Soumis';
+    const STATUS_ASSIGNED = 'Affecté';
+    const STATUS_COMMENTED = 'commenté';
+    const STATUS_JURY_PENDING = 'En attente jury';
+
+    const STATUS_PENDING = 'En attente';
+    const STATUS_VALIDATED = 'Validé';
+    const STATUS_FINAL = 'Validé final';
+    const STATUS_REJECTED = 'Rejeté';
+
     protected $fillable = [
         'student_id',
         'title',
@@ -42,9 +52,8 @@ class Report extends Model
     // Relation : Rapport ← Président du jury (champ legacy)
     public function jury()
     {
-        return $this->belongsTo(User::class, 'jury_id');
+        return $this->hasOne(Jury::class);
     }
-
     // ⭐ NOUVEAU : Tous les membres du jury (1-4)
     // Dans app/Models/Report.php
     public function juryMembers()
@@ -77,5 +86,15 @@ class Report extends Model
     public function latestVersion()
     {
         return $this->hasOne(ReportVersion::class)->latest('created_at');
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function juryGroup()
+    {
+        return $this->hasOne(Jury::class);
     }
 }

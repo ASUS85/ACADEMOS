@@ -9,14 +9,15 @@
         'totalDepartments' => \App\Models\Department::count(),
     ];
 
+    // ✅ CORRECTION : CLONER la query pour chaque count
     $reportsQuery = \App\Models\Report::with(['student']);
-    $totalReports = $reportsQuery->count();
-    $submittedCount = $reportsQuery->where('status', 'Soumis')->count();
-    $assignedCount = $reportsQuery->where('status', 'Affecté')->count();
-    $evaluatedCount = $reportsQuery->where('status', 'Évalué')->count();
-    $validatedCount = $reportsQuery->where('status', 'Validé final')->count();
+    $totalReports = $reportsQuery->count(); // ✅ TOTAL
+    $submittedCount = (clone $reportsQuery)->where('status', 'Soumis')->count();
+    $assignedCount = (clone $reportsQuery)->where('status', 'Affecté')->count();
+    $evaluatedCount = (clone $reportsQuery)->where('status', 'Évalué')->count();
+    $validatedCount = (clone $reportsQuery)->where('status', 'Validé final')->count();
 
-    // Top 10 étudiants actifs (avec rapports) TOUS départements
+    // Top 10 étudiants actifs
     $studentsQuery = \App\Models\User::role('student')
         ->whereHas('reports')
         ->with(['filiere', 'department', 'reports.teacher'])
@@ -25,30 +26,100 @@
     if (request()->filled('search')) {
         $search = request('search');
         $studentsQuery->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%$search%")
-              ->orWhere('matricule', 'like', "%$search%");
+            $q->where('name', 'like', "%$search%")->orWhere('matricule', 'like', "%$search%");
         });
     }
 
-    $students = $studentsQuery->take(10)->get(); // Top 10 sans pagination pour aperçu
+    $students = $studentsQuery->take(10)->get();
 @endphp
+
+{{-- Chart avec variables CORRIGÉES --}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('reportChart')?.getContext('2d');
+        if (!ctx) return; // Sécurité si canvas absent
+
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ["Soumis", "Affecté", "Évalué", "Validé"],
+                datasets: [{
+                    data: [
+                        {{ $submittedCount }}, // ✅ Correct
+                        {{ $assignedCount }}, // ✅ Correct
+                        {{ $evaluatedCount }}, // ✅ Correct
+                        {{ $validatedCount }} // ✅ Correct
+                    ],
+                    backgroundColor: ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                cutout: '0%'
+            }
+        });
+    });
+</script>
+
 
 <style>
     :root {
         --purple: #6f42c1;
         --blue-main: #3681B6;
     }
-    .stat-hover:hover { transform: translateY(-3px); }
-    .legend-dot { width: 22px; height: 22px; border-radius: 50%; }
-    .legend-pill { border-radius: 999px; }
-    .scroll-thin::-webkit-scrollbar { width: 5px; }
-    .scroll-thin::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
-    @keyframes fadeInRight {
-        from { opacity: 0; transform: translateX(50px); }
-        to { opacity: 1; transform: translateX(0); }
+
+    .stat-hover:hover {
+        transform: translateY(-3px);
     }
-    .animate__animated { animation: fadeInRight 0.4s ease-out; }
-    .modal-wide { min-height: 800px; min-width: 900px; }
+
+    .legend-dot {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+    }
+
+    .legend-pill {
+        border-radius: 999px;
+    }
+
+    .scroll-thin::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .scroll-thin::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 10px;
+    }
+
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(50px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .animate__animated {
+        animation: fadeInRight 0.4s ease-out;
+    }
+
+    .modal-wide {
+        min-height: 800px;
+        min-width: 900px;
+    }
 </style>
 
 <div class="bg-light py-3 px-3 px-md-4">
@@ -60,9 +131,11 @@
     {{-- Stat cards GLOBALES --}}
     <div class="row g-3 mb-4">
         <div class="col-md-2">
-            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover"
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                 <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;">
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
                         <i class="fas fa-users fa-lg"></i>
                     </div>
                     <div>
@@ -76,7 +149,8 @@
         <div class="col-md-2">
             <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background-color:#3EA84C;">
                 <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;">
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
                         <i class="fas fa-user-graduate fa-lg"></i>
                     </div>
                     <div>
@@ -90,7 +164,8 @@
         <div class="col-md-2">
             <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background-color:#3681B6;">
                 <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;">
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
                         <i class="fas fa-chalkboard-teacher fa-lg"></i>
                     </div>
                     <div>
@@ -102,9 +177,11 @@
         </div>
 
         <div class="col-md-2">
-            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover"
+                style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                 <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;">
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
                         <i class="fas fa-user-shield fa-lg"></i>
                     </div>
                     <div>
@@ -116,9 +193,11 @@
         </div>
 
         <div class="col-md-2">
-            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="card border-0 rounded-3 shadow-sm text-white stat-hover"
+                style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                 <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;">
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
                         <i class="fas fa-building-columns fa-lg"></i>
                     </div>
                     <div>
@@ -132,7 +211,8 @@
         <div class="col-md-2">
             <div class="card border-0 rounded-3 shadow-sm text-white stat-hover" style="background-color:#3EA84C;">
                 <div class="card-body d-flex align-items-center">
-                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;">
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-3"
+                        style="width:48px;height:48px;">
                         <i class="fas fa-file-contract fa-lg"></i>
                     </div>
                     <div>
@@ -189,9 +269,11 @@
                 <div class="card-body">
                     <h5 class="fw-bold mb-3 p-3 pt-0 text-center shadow-sm bg-white rounded-3">🚀 Actions rapides</h5>
 
-                    <a href="{{ url('/superadmin/users') }}" class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
+                    <a href="{{ url('/superadmin/users') }}"
+                        class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
                         <div class="d-flex align-items-center">
-                            <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 me-3" style="width:38px;height:38px;">
+                            <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 me-3"
+                                style="width:38px;height:38px;">
                                 <i class="fas fa-users-cog"></i>
                             </div>
                             <div>
@@ -202,9 +284,11 @@
                         <i class="fa fa-chevron-right fa-xs text-muted"></i>
                     </a>
 
-                    <a href="{{ route('superadmin.students.index') }}" class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
+                    <a href="{{ route('superadmin.students.index') }}"
+                        class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
                         <div class="d-flex align-items-center">
-                            <div class="d-flex align-items-center justify-content-center bg-success-subtle text-success rounded-3 me-3" style="width:38px;height:38px;">
+                            <div class="d-flex align-items-center justify-content-center bg-success-subtle text-success rounded-3 me-3"
+                                style="width:38px;height:38px;">
                                 <i class="fas fa-user-graduate"></i>
                             </div>
                             <div>
@@ -215,9 +299,11 @@
                         <i class="fa fa-chevron-right fa-xs text-muted"></i>
                     </a>
 
-                    <a href="{{ route('superadmin.teachers.index') }}" class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
+                    <a href="{{ route('superadmin.teachers.index') }}"
+                        class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
                         <div class="d-flex align-items-center">
-                            <div class="d-flex align-items-center justify-content-center bg-info-subtle text-info rounded-3 me-3" style="width:38px;height:38px;">
+                            <div class="d-flex align-items-center justify-content-center bg-info-subtle text-info rounded-3 me-3"
+                                style="width:38px;height:38px;">
                                 <i class="fas fa-chalkboard-teacher"></i>
                             </div>
                             <div>
@@ -228,9 +314,11 @@
                         <i class="fa fa-chevron-right fa-xs text-muted"></i>
                     </a>
 
-                    <a href="{{ route('superadmin.admins.index') }}" class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
+                    <a href="{{ route('superadmin.admins.index') }}"
+                        class="d-flex align-items-center justify-content-between p-3 border rounded-3 text-decoration-none text-secondary mb-2 bg-white shadow-sm">
                         <div class="d-flex align-items-center">
-                            <div class="d-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-3 me-3" style="width:38px;height:38px;">
+                            <div class="d-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-3 me-3"
+                                style="width:38px;height:38px;">
                                 <i class="fas fa-user-shield"></i>
                             </div>
                             <div>
@@ -258,7 +346,7 @@
                         <i class="fas fa-search text-muted"></i>
                     </span>
                     <input type="text" name="search" class="form-control bg-light border-0 shadow-none"
-                           placeholder="Rechercher étudiant..." value="{{ request('search') }}">
+                        placeholder="Rechercher étudiant..." value="{{ request('search') }}">
                 </div>
             </form>
         </div>
@@ -320,25 +408,36 @@
 {{-- Scripts --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    const ctx = document.getElementById('reportChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ["Soumis", "Affecté", "Évalué", "Validé"],
-            datasets: [{
-                data: [{{ $submittedCount }}, {{ $assignedCount }}, {{ $evaluatedCount }}, {{ $validatedCount }}],
-                backgroundColor: ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display:false } },
-            cutout: '0%'
-        }
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('reportChart')?.getContext('2d');
+        if (!ctx) return; // Sécurité si canvas absent
+
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ["Soumis", "Affecté", "Évalué", "Validé"],
+                datasets: [{
+                    data: [
+                        {{ $submittedCount }}, // ✅ Correct
+                        {{ $assignedCount }}, // ✅ Correct
+                        {{ $evaluatedCount }}, // ✅ Correct
+                        {{ $validatedCount }} // ✅ Correct
+                    ],
+                    backgroundColor: ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                cutout: '0%'
+            }
+        });
     });
-});
 </script>
