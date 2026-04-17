@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Filiere;
+use App\Models\Matiere;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule; //
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TeacherController extends Controller
 {
@@ -18,39 +20,68 @@ class TeacherController extends Controller
         $department = auth()->user()->department;
 
         $specialites = Filiere::where('department_id', $department->id)->get();
+        $filiere_id = $specialites->first();
+        $matieres = $filiere_id ? Matiere::where('filiere_id', $filiere_id->id)->get() : collect();
 
-        return view('admin.teachers.create', compact('department', 'specialites'));
+        return view('admin.teachers.create', compact('department', 'specialites', 'matieres'));
     }
 
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'email' => 'required|email|unique:users',
-            'matricule' => 'required|unique:users',
-            'grade' => 'required',
-            'specialite' => 'required|exists:filieres,id',
-            'sexe' => 'required'
-        ]);
+        Log::debug('Teacher store payload raw', $request->all());
 
-        $teacher = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'matricule' => $request->matricule,
-            'grade' => $request->grade,
-            'specialite' => (int)$request->specialite,
-            'sexe' => $request->sexe,
-            'department_id' => auth()->user()->department_id,
-            'password' => bcrypt('password123'),
-            'created_by' => auth()->id()
-        ]);
+        try {
+            $validated = $request->validate([
+                'name'      => ['required', 'string', 'max:255'],
+                'email'     => ['required', 'email', 'max:255', 'unique:users,email'],
+                'matricule' => ['required', 'string', 'max:100', 'unique:users,matricule'],
+                'grade'     => ['required', 'string', 'max:100'],
+                'sexe'      => ['required', 'in:Homme,Femme'],
+                'filieres'  => ['nullable', 'array'],
+                'filieres.*' => ['integer', 'exists:filieres,id'],
+                'matieres'  => ['nullable', 'array'],
+                'matieres.*' => ['integer', 'exists:matieres,id'],
+            ]);
 
-        $teacher->assignRole('teacher');
+            Log::debug('Validation OK', $validated);
 
-        return redirect()->route('admin.teachers.index')
-            ->with('success', 'Enseignant créé avec succès');
+            $teacher = User::create([
+                'name'          => $validated['name'],
+                'email'         => $validated['email'],
+                'matricule'     => $validated['matricule'],
+                'grade'         => $validated['grade'],
+                'sexe'          => $validated['sexe'],
+                'department_id' => auth()->user()->department_id,
+                'password'      => Hash::make('password123'),
+                'created_by'    => auth()->id(),
+            ]);
+
+            Log::debug('User created', ['id' => $teacher->id]);
+
+            $teacher->assignRole('teacher');
+            Log::debug('Role assigned');
+
+            $teacher->filieres()->sync($validated['filieres'] ?? []);
+            Log::debug('Filieres synced');
+
+            $teacher->matieres()->sync($validated['matieres'] ?? []);
+            Log::debug('Matieres synced');
+
+           return back()->with('success', 'Enseignant créé avec succès ');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation failed', $e->errors());
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Store failed', [
+                'message' => $e->getMessage(),
+                'line'    => $e->getLine(),
+                'file'    => $e->getFile(),
+            ]);
+            throw $e;
+        }
     }
+
 
 
     public function index()
@@ -60,6 +91,7 @@ class TeacherController extends Controller
         $users = User::role('teacher')
             ->where('department_id', $departmentId)
             ->with('filiere')
+            ->latest()
             ->paginate(10);
 
         return view('admin.teachers.index', compact('users'));
@@ -75,17 +107,25 @@ class TeacherController extends Controller
             abort(403);
         }
 
+        // Mise à jour des champs simples
         $teacher->update($request->only([
             'name',
             'email',
             'matricule',
             'grade',
-            'specialite',
             'sexe'
         ]));
 
-        return back()->with('success', 'Mis à jour');
+        // Synchroniser les filières (même si vide)
+        $teacher->filieres()->sync($request->input('filieres', []));
+
+        // Synchroniser les matières (même si vide)
+        $teacher->matieres()->sync($request->input('matieres', []));
+
+        return back()->with('success', 'Enseignant mis à jour avec succès ✅');
     }
+
+
 
 
     public function destroy(User $teacher)

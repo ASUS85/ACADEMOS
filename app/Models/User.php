@@ -84,6 +84,11 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function matieres()
+    {
+        return $this->belongsToMany(Matiere::class, 'matiere_teacher');
+    }
+
     // Ancienne relation jury_id (legacy, à garder pour compatibilité)
     public function legacyJuryReports()
     {

@@ -185,57 +185,57 @@ class ReportController extends Controller
      */
     public function assignJury(Request $request, Report $report)
     {
+        // 1) Vérifier que le rapport est validé
+        if ($report->status !== Report::STATUS_VALIDATED) {
+            return response()->json([
+                'success' => false,
+                'message' => "❌ Le rapport doit être validé avant d'assigner un jury"
+            ], 422);
+        }
+
+        // 2) Valider les champs (on passe à president_id / rapporteur_id)
         $request->validate([
-            'jury_ids' => ['required', 'array', 'min:1', 'max:4'],
-            'jury_ids.*' => ['integer', 'exists:users,id'],
+            'president_id'  => ['required', 'integer', 'different:rapporteur_id', 'exists:users,id'],
+            'rapporteur_id' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        $juryIds = array_filter($request->jury_ids);
-
-        // Vérifier encadreur
-        if ($report->teacher_id && in_array($report->teacher_id, $juryIds)) {
+        // 3) Empêcher président = rapporteur (déjà dans different:)
+        if ($request->president_id == $request->rapporteur_id) {
             return response()->json([
                 'success' => false,
-                'message' => "❌ L'encadreur ne peut pas faire partie du jury."
+                'message' => '❌ Président et rapporteur doivent être différents'
             ], 422);
         }
 
-        // Vérifier rôles
-        $members = User::whereIn('id', $juryIds)
-            ->where(function ($query) {
-                $query->whereHas('roles', function ($q) {
-                    $q->where('name', 'teacher');
-                })->orWhereHas('roles', function ($q) {
-                    $q->where('name', 'jury');
-                });
-            })
-            ->get();
+        // 4) Créer / récupérer le jury pour ce rapport
+        $jury = \App\Models\Jury::updateOrCreate(
+            ['report_id' => $report->id],
+            ['department_id' => auth()->user()->department_id]
+        );
 
-        if ($members->count() !== count($juryIds)) {
-            return response()->json([
-                'success' => false,
-                'message' => "❌ Certains membres n'ont pas le rôle 'teacher' ou 'jury'."
-            ], 422);
+        // 5) Réinitialiser les membres
+        $jury->members()->detach();
+
+        // 5a) Ajouter l’encadreur comme membre "encadreur" si présent
+        if ($report->teacher_id) {
+            $jury->members()->attach($report->teacher_id, ['role' => 'encadreur']);
         }
 
-        // ✅ ÇA MARCHE MAINTENANT !
-        $report->juryMembers()->detach();
+        // 5b) Ajouter le président
+        $jury->members()->attach($request->president_id, ['role' => 'president']);
 
-        $presidentId = $juryIds[0];
-        foreach ($juryIds as $index => $userId) {
-            $report->juryMembers()->attach((int)$userId, [
-                'is_president' => ($index === 0)
-            ]);
-        }
+        // 5c) Ajouter le rapporteur
+        $jury->members()->attach($request->rapporteur_id, ['role' => 'rapporteur']);
 
+        // 6) Mettre à jour le statut du rapport
         $report->update([
-            'jury_id' => $presidentId,
-            'status' => 'En attente jury'
+            'status'  => Report::STATUS_JURY_PENDING,
+            'jury_id' => $request->president_id, // si tu veux garder ce champ comme "président"
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => "✅ Jury affecté ! (" . count($juryIds) . " membre(s))"
+            'message' => '✅ Jury constitué avec succès'
         ]);
     }
 
@@ -310,8 +310,9 @@ class ReportController extends Controller
     /**
      * Index administrateur
      */
-    public function adminIndex(Request $request)
+    public function adminIndex(Request $request, Report $report)
     {
+
         $user = auth()->user();
 
         $query = Report::with(['student.filiere', 'teacher', 'comments.user', 'juryGroup.members', 'juryMembers']);
@@ -340,7 +341,10 @@ class ReportController extends Controller
         // récupérer filières du département
         $filieres = \App\Models\Filiere::where('department_id', $user->department_id)->get();
 
-        return view('admin.reports.index', compact('reports', 'filieres'));
+        //récuperer les teachers
+        $teachers = User::role('teacher')->where('department_id', $user->department_id)->get();
+
+        return view('admin.reports.index', compact('reports', 'filieres', 'teachers'));
     }
 
     public function superadminReports()

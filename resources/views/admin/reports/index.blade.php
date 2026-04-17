@@ -502,8 +502,8 @@
                                                 <button class="btn btn-secondary"
                                                     data-bs-dismiss="modal">Annuler</button>
 
-                                                <button class="btn btn-success"
-                                                    onclick="submitJury({{ $report->id }})">
+                                                <button class="btn btn-success btn-validate-jury"
+                                                    data-report-id="{{ $report->id }}">
                                                     ✅ Valider le jury
                                                 </button>
                                             </div>
@@ -526,6 +526,15 @@
 
     {{-- ✅ JS COMPLÈT --}}
     <script>
+        document.querySelectorAll('.btn-validate-jury').forEach(btn => {
+            btn.addEventListener('click', function() {
+                console.log('click jury', this.dataset.reportId);
+                const reportId = this.dataset.reportId;
+                submitJury(reportId);
+            });
+
+        });
+
         function showToast(message, type = 'success') {
             const toast = new bootstrap.Toast(document.getElementById('liveToast'));
             document.getElementById('toast-message').innerHTML =
@@ -536,7 +545,6 @@
         }
 
         function submitJury(reportId) {
-
             const president = document.getElementById(`president_${reportId}`).value;
             const rapporteur = document.getElementById(`rapporteur_${reportId}`).value;
 
@@ -544,11 +552,12 @@
                 return showToast("Veuillez sélectionner président et rapporteur", "danger");
             }
 
-            fetch(`/reports/${reportId}/assign-jury`, {
+            fetch(`{{ url('/reports')}}/${reportId}/assign-jury`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
                         president_id: president,
@@ -558,11 +567,16 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        showToast("Jury assigné avec succès");
+                        showToast(data.message || "Jury assigné avec succès");
                         location.reload();
+                    } else {
+                        showToast(data.message || "Erreur", "danger");
                     }
-                });
+                })
+                .catch(() => showToast('Erreur réseau', 'danger'));
         }
+
+
 
         function assignTeacher(reportId) {
             const teacherId = document.getElementById(`teacher_${reportId}`).value;
@@ -614,67 +628,6 @@
                 });
         }
 
-        public
-        function assignJury(Request $request, Report $report) {
-            $request - > validate([
-                'president_id' => 'required|exists:users,id',
-                'rapporteur_id' => 'required|exists:users,id',
-            ]);
-
-            // ✅ Vérifier statut
-            if ($report - > status !== 'Validé') {
-                return response() - > json([
-                    'success' => false,
-                    'message' => '❌ Le rapport doit être validé avant d\'assigner un jury'
-                ], 422);
-            }
-
-            // ✅ Empêcher doublon
-            if ($request - > president_id == $request - > rapporteur_id) {
-                return response() - > json([
-                    'success' => false,
-                    'message' => '❌ Président et rapporteur doivent être différents'
-                ], 422);
-            }
-
-            // ✅ Créer ou récupérer jury
-            $jury = \App\ Models\ Jury::updateOrCreate(
-                ['report_id' => $report - > id],
-                ['department_id' => auth() - > user() - > department_id]
-            );
-
-            // 🔥 Reset membres
-            $jury - > members() - > detach();
-
-            // ✅ Ajouter encadreur
-            if ($report - > teacher_id) {
-                $jury - > members() - > attach($report - > teacher_id, [
-                    'role' => 'encadreur'
-                ]);
-            }
-
-            // ✅ Ajouter président
-            $jury - > members() - > attach($request - > president_id, [
-                'role' => 'president'
-            ]);
-
-            // ✅ Ajouter rapporteur
-            $jury - > members() - > attach($request - > rapporteur_id, [
-                'role' => 'membre'
-            ]);
-
-            // ✅ Mise à jour status
-            $report - > update([
-                'status' => 'En attente jury'
-            ]);
-
-            return response() - > json([
-                'success' => true,
-                'message' => '✅ Jury constitué avec succès'
-            ]);
-        }
-
-
         function addComment(reportId) {
             showToast('Fonctionnalité en développement', 'info');
         }
@@ -692,8 +645,10 @@
         });
 
         // ⭐ JURY MODAL FUNCTIONS
+        @foreach ($reports as $report)
         let juryData_{{ $report->id }} = @json(\App\Models\User::role(['teacher', 'jury'])->where('department_id', auth()->user()->department_id)->get());
-
+        @endforeach
+        
         function filterJury(reportId) {
             const dept = document.getElementById(`jury_dept_${reportId}`).value;
             const filiere = document.getElementById(`jury_filiere_${reportId}`).value;
