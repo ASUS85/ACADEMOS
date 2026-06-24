@@ -67,21 +67,29 @@ class User extends Authenticatable
         return $this->hasMany(Report::class, 'teacher_id');
     }
 
-    // ⭐ NOUVEAU : Enseignant/Juré : rapports où je suis juré (table pivot)
-    public function juryReports()
+    // Enseignant/Juré : jurys auxquels l'utilisateur appartient.
+    public function juries()
     {
-        return $this->belongsToMany(Report::class, 'jury_report')
-            ->withPivot('is_president')
-            ->withTimestamps()
-            ->orderBy('pivot_is_president', 'desc');
+        return $this->belongsToMany(Jury::class, 'jury_user')
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
-    // ⭐ NOUVEAU : Président du jury uniquement
+    // Enseignant/Juré : rapports où je suis membre du jury.
+    public function juryReports()
+    {
+        return Report::whereHas('juryGroup.members', function ($query) {
+            $query->where('users.id', $this->id);
+        });
+    }
+
+    // Président du jury uniquement.
     public function juryPresidentReports()
     {
-        return $this->belongsToMany(Report::class, 'jury_report')
-            ->wherePivot('is_president', true)
-            ->withTimestamps();
+        return Report::whereHas('juryGroup.members', function ($query) {
+            $query->where('users.id', $this->id)
+                ->where('jury_user.role', 'president');
+        });
     }
 
     // Ancienne relation jury_id (legacy, à garder pour compatibilité)

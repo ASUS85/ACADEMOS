@@ -17,6 +17,9 @@
     $evaluatedCount = (clone $reportsQuery)->where('status', 'Évalué')->count();
     $validatedCount = (clone $reportsQuery)->where('status', 'Validé final')->count();
 
+    // Indique si tous les compteurs de rapports sont à zéro
+    $reportsAllZero = (($submittedCount + $assignedCount + $evaluatedCount + $validatedCount) === 0);
+
     // Top 10 étudiants actifs
     $studentsQuery = \App\Models\User::role('student')
         ->whereHas('reports')
@@ -40,18 +43,20 @@
         const ctx = document.getElementById('reportChart')?.getContext('2d');
         if (!ctx) return; // Sécurité si canvas absent
 
+        const reportsAllZero = {{ $reportsAllZero ? 'true' : 'false' }};
+
         new Chart(ctx, {
             type: 'pie',
             data: {
                 labels: ["Soumis", "Affecté", "Évalué", "Validé"],
                 datasets: [{
-                    data: [
+                    data: (reportsAllZero) ? [1] : [
                         {{ $submittedCount }}, // ✅ Correct
                         {{ $assignedCount }}, // ✅ Correct
                         {{ $evaluatedCount }}, // ✅ Correct
                         {{ $validatedCount }} // ✅ Correct
                     ],
-                    backgroundColor: ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],
+                    backgroundColor: (reportsAllZero) ? ['#e2e8f0'] : ["#f6ad55", "#feb2b2", "#90cdf4", "#9ae6b4"],
                     borderWidth: 2,
                     borderColor: '#ffffff'
                 }]
@@ -62,6 +67,16 @@
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (reportsAllZero) return 'Aucune donnée';
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                return label + ': ' + value;
+                            }
+                        }
                     }
                 },
                 cutout: '0%'

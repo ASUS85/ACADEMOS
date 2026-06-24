@@ -148,21 +148,22 @@
             /* Rouge clair au survol */
             background: rgba(255, 255, 255, 0.1);
         }
+
     </style>
 </head>
 
 <body>
     <!-- TOPBAR -->
-    {{--  <nav class="navbar navbar-dark bg-light px-4">
+    {{-- <nav class="navbar navbar-dark bg-light px-4">
         <img src="{{ asset('images/logo1.png') }}"
-         alt="Logo Academos"
-         width="80"
-         class="me-2">
+    alt="Logo Academos"
+    width="80"
+    class="me-2">
 
-        <div class="text-dark">
-            <i class="fa fa-user"></i>
-            {{ Auth::user()->name ?? 'Utilisateur' }}
-        </div>
+    <div class="text-dark">
+        <i class="fa fa-user"></i>
+        {{ Auth::user()->name ?? 'Utilisateur' }}
+    </div>
     </nav> --}}
     @include('layouts.navigation')
 
@@ -180,99 +181,88 @@
         </a>
 
         @switch(Auth::user()->role_name)
-            @case('admin')
-                <a href="{{ url('/admin/users') }}">
-                    <i class="fa fa-users"></i>
-                    <span class="menu-text">Utilisateurs</span>
-                </a>
-                <a href="{{ url('/admin/reports') }}">
-                    <i class="fa fa-file"></i>
-                    <span class="menu-text">Rapports</span>
-                </a>
-                <a href="{{ url('/admin/juries') }}">
-                   <i class="fa fa-gavel"></i>
-                    <span class="menu-text">Groupe de jury</span>
-                </a>
-                <a href="{{ url('/admin/profile') }}">
-                    <i class="fa fa-user"></i>
-                    <span class="menu-text">Profil</span>
-                </a>
-            @break
+        @case('admin')
+        <a href="{{ route('admin.users.index') }}">
+            <i class="fa fa-users"></i>
+            <span class="menu-text">Utilisateurs</span>
+        </a>
+        <a href="{{ route('admin.reports.index') }}">
+            <i class="fa fa-file"></i>
+            <span class="menu-text">Rapports</span>
+        </a>
+        <a href="{{ route('admin.juries.index') }}">
+            <i class="fa fa-gavel"></i>
+            <span class="menu-text">Groupe de jury</span>
+        </a>
+        <a href="{{ route('admin.profile.admin') }}">
+            <i class="fa fa-user"></i>
+            <span class="menu-text">Profil</span>
+        </a>
+        @break
 
-            @case('teacher')
-                <a href="{{ url('/teacher/reports') }}">
-                    <i class="fa fa-file"></i>
-                    <span class="menu-text">Rapports</span>
-                </a>
-                <a href="/reports">
-                    <i class="fa fa-message"></i>
-                    <span class="menu-text">Commentaires</span>
-                </a>
-                <a href="/profile">
-                   <i class="fa fa-gavel"></i>
-                    <span class="menu-text">Groupe de jury</span>
-                </a>
-                <a href="{{ url('/teacher/profile') }}">
-                    <i class="fa fa-user"></i>
-                    <span class="menu-text">Profil</span>
-                </a>
-            @break
+        @case('teacher')
+        <a href="{{ route('teacher.reports.index') }}">
+            <i class="fa fa-file"></i>
+            <span class="menu-text">Rapports</span>
+        </a>
+        <a href="{{ route('teacher.reports.index') }}">
+            <i class="fa fa-message"></i>
+            <span class="menu-text">Commentaires</span>
+        </a>
+        <a href="{{ route('teacher.reports.index') }}">
+            <i class="fa fa-gavel"></i>
+            <span class="menu-text">Groupe de jury</span>
+        </a>
+        <a href="{{ route('teacher.profile') }}">
+            <i class="fa fa-user"></i>
+            <span class="menu-text">Profil</span>
+        </a>
+        @break
 
-            @case('student')
-                <a href="/reports">
-                    <i class="fa fa-file"></i>
-                    <span class="menu-text">Mes Rapports</span>
-                </a>
-                <a href="/reports">
-                    <i class="fa fa-message"></i>
-                    <span class="menu-text">Commentaires</span>
-                </a>
-                <a href="/profile">
-                   <i class="fa fa-history"></i>
-                    <span class="menu-text">Historique</span>
-                </a>
-                <a href="{{ url('/student/profile') }}">
-                    <i class="fa fa-user"></i>
-                    <span class="menu-text">Profil</span>
-                </a>
-            @break
+        @case('student')
+        <a href="{{ route('student.dashboard') }}">
+            <i class="fa fa-file"></i>
+            <span class="menu-text">Mes Rapports</span>
+        </a>
+        <a href="{{ route('student.dashboard') }}">
+            <i class="fa fa-message"></i>
+            <span class="menu-text">Commentaires</span>
+        </a>
+        <a href="{{ route('student.dashboard') }}">
+            <i class="fa fa-history"></i>
+            <span class="menu-text">Historique</span>
+        </a>
+        <a href="{{ route('student.profile.student') }}">
+            <i class="fa fa-user"></i>
+            <span class="menu-text">Profil</span>
+        </a>
+        @break
 
-            @case('superadmin')
-                <a href="{{ url('/superadmin/users') }}">
-                    <i class="fa fa-users"></i>
-                    <span class="menu-text">Utilisateurs</span>
-                </a>
-                <a href="/reports">
-                    <i class="fa fa-file"></i>
-                    <span class="menu-text">Rapports</span>
-                </a>
-                {{-- <a href="/students">
-                    <i class="fa fa-user-graduate"></i>
-                    <span class="menu-text">Étudiants</span>
-                </a>
+        @case('superadmin')
+        <a href="{{ route('superadmin.users.index') }}">
+            <i class="fa fa-users"></i>
+            <span class="menu-text">Utilisateurs</span>
+        </a>
+        <a href="{{ route('superadmin.reports') }}">
+            <i class="fa fa-file"></i>
+            <span class="menu-text">Rapports</span>
+        </a>
+        <a href="{{ route('superadmin.stats') }}">
+            <i class="fa fa-chart-bar"></i>
+            <span class="menu-text">Statistiques</span>
+        </a>
+        <a href="{{ route('superadmin.system') }}">
+            <i class="fa fa-gear"></i>
+            <span class="menu-text">Paramètres</span>
+        </a>
+        <a href="{{ route('profile.edit') }}">
+            <i class="fa fa-user"></i>
+            <span class="menu-text">Profil</span>
+        </a>
+        @break
 
-                <a href="/teachers">
-                    <i class="fa fa-chalkboard-teacher"></i>
-                    <span class="menu-text">Enseignants</span>
-                </a> --}}
-
-
-                <a href="/profile">
-                   <i class="fa fa-gavel"></i>
-                    <span class="menu-text">Groupe de jury</span>
-                </a>
-                <a href="/profile">
-                    <i class="fa fa-gear"></i>
-                    <span class="menu-text">Paramètres</span>
-                </a>
-                <a href="/profile">
-                    <i class="fa fa-user"></i>
-                    <span class="menu-text">Profil</span>
-                </a>
-            @break
-
-            @default
-                <span class="menu-text">Aucun menu disponible</span>
+        @default
+        <span class="menu-text">Aucun menu disponible</span>
         @endswitch
 
         <div class="mt-auto-custom">
@@ -308,7 +298,7 @@
 
 
 
-    {{--  <div class="container-fluid min-vh-100 bg-light px-0">
+    {{-- <div class="container-fluid min-vh-100 bg-light px-0">
         @include('layouts.navigation')
 
         <!-- Page Heading -->
@@ -316,18 +306,18 @@
             <header class="bg-white shadow-sm border-bottom">
                 <div class="container py-4">
                     <h2 class="h3 fw-bold text-primary mb-0">{{ $header }}</h2>
-                </div>
-            </header>
-        @endisset
+    </div>
+    </header>
+    @endisset
 
-        <!-- Page Content -->
-        <main class="container my-4">
-            <div class="row justify-content-center">
-                <div class="col-lg-10">
-                    {{ $slot }}
-                </div>
+    <!-- Page Content -->
+    <main class="container my-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                {{ $slot }}
             </div>
-        </main>
+        </div>
+    </main>
     </div> --}}
     <!-- Page Content -->
     <div class="content-area">
@@ -344,30 +334,32 @@
         toggleBtn.addEventListener("click", () => {
             sidebar.classList.toggle("expanded");
         });
+
     </script>
 
 
     @if (session('success'))
-        <div id="toast-success" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999;">
-            <div class="toast show border-0" style="background-color:#d1e7dd; color:#0f5132;">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        {{ session('success') }}
-                    </div>
+    <div id="toast-success" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999;">
+        <div class="toast show border-0" style="background-color:#d1e7dd; color:#0f5132;">
+            <div class="d-flex">
+                <div class="toast-body">
+                    {{ session('success') }}
                 </div>
             </div>
         </div>
+    </div>
 
-        <script>
-            setTimeout(() => {
-                let toast = document.getElementById('toast-success');
-                if (toast) {
-                    toast.style.transition = "opacity 0.5s";
-                    toast.style.opacity = "0";
-                    setTimeout(() => toast.remove(), 500);
-                }
-            }, 3000); // ⏱️ 3 secondes
-        </script>
+    <script>
+        setTimeout(() => {
+            let toast = document.getElementById('toast-success');
+            if (toast) {
+                toast.style.transition = "opacity 0.5s";
+                toast.style.opacity = "0";
+                setTimeout(() => toast.remove(), 500);
+            }
+        }, 3000); // ⏱️ 3 secondes
+
+    </script>
     @endif
 </body>
 

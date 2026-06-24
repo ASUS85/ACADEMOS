@@ -138,23 +138,23 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/system', [AdminController::class, 'systemConfig'])->name('system');
             Route::get('/stats', [ReportController::class, 'superadminStats'])->name('stats');
-            Route::resource('admins', AdminController::class);
-
             Route::get('/students', [UserController::class, 'studentsIndex'])->name('students.index');
             Route::get('/teachers', [UserController::class, 'teachersIndex'])->name('teachers.index');
             Route::get('/users', [UserController::class, 'usersIndex'])->name('users.index');
 
-            Route::delete('/users{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+            Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
 
             // Filtres pour enseignants
             Route::get('/teachers/{user}/edit', [UserController::class, 'editTeacher'])->name('teachers.edit');
             Route::patch('/teachers/{user}', [UserController::class, 'updateTeacher'])->name('teachers.update');
             Route::delete('/teachers/{user}', [UserController::class, 'destroyTeacher'])->name('teachers.destroy');
-            Route::get('/students/{user}/edit', [AdminController::class, 'editStudent'])->name('students.edit');
+            Route::get('/students/{user}/edit', [UserController::class, 'editStudent'])->name('students.edit');
+            Route::patch('/students/{user}', [UserController::class, 'updateStudent'])->name('students.update');
+            Route::delete('/students/{user}', [UserController::class, 'destroyStudent'])->name('students.destroy');
 
             Route::get('/admins', [UserController::class, 'adminsIndex'])->name('admins.index');
             Route::get('/admins/{user}/edit', [UserController::class, 'editAdmin'])->name('admins.edit');
-            Route::patch('/admins/{user}', [ProfileController::class, 'updateUser'])->name('admins.update');
+            Route::patch('/admins/{user}', [UserController::class, 'updateAdmin'])->name('admins.update');
             Route::delete('/admins/{user}', [UserController::class, 'destroyAdmin'])->name('admins.destroy');
             Route::get('/admins/create', [UserController::class, 'createAdmin'])->name('admins.create');
             Route::post('/admins', [UserController::class, 'storeAdmin'])->name('admins.store');
@@ -170,17 +170,28 @@ Route::middleware('auth')->group(function () {
             Route::get('/stats', [ReportController::class, 'adminStats'])->name('stats.index');
             Route::get('/teachers/create', [TeacherController::class, 'create'])->name('teachers.create');
             Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
-            Route::resource('teachers', TeacherController::class);
             Route::get('/students', [AdminController::class, 'studentsIndex'])->name('students.index');
-            Route::get('/students/{user}/edit', [AdminController::class, 'editStudent'])->name('students.edit');
+            Route::get('/students/{user}/edit', [UserController::class, 'editStudent'])->name('students.edit');
             Route::patch('/students/{user}', [UserController::class, 'updateStudent'])->name('students.update');
             Route::delete('/students/{user}', [AdminController::class, 'destroyUser'])->name('students.destroy');
             Route::get('/teachers', [AdminController::class, 'teachersIndex'])->name('teachers.index');
-            Route::get('/teachers/{teacher}/edit', [TeacherController::class, 'update'])->name('teachers.edit');
+            Route::get('/teachers/{teacher}/edit', [TeacherController::class, 'edit'])->name('teachers.edit');
+            Route::patch('/teachers/{teacher}', [TeacherController::class, 'update'])->name('teachers.update');
             Route::delete('/teachers/{teacher}', [TeacherController::class, 'destroy'])->name('teachers.destroy');
             Route::get('/profile', [ProfileController::class, 'adminProfile'])->name('profile.admin');
-            Route::resource('/juries', JuryController::class);
+            Route::prefix('juries')
+                ->name('juries.')
+                ->controller(\App\Http\Controllers\Admin\JuryController::class)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/', 'store')->name('store');
+                    Route::put('/{jury}', 'update')->name('update');
+                    Route::delete('/{jury}', 'destroy')->name('destroy');
+                });
             Route::patch('/update', [ProfileController::class, 'updateUser'])->name('admin.update');
+            Route::post('/reports/add-jury-member', [ReportController::class, 'addJuryMember'])->name('reports.addJuryMember');
+            Route::post('/juries/add-member', [JuryController::class, 'addJuryMember'])->name('juries.addMember');
+
         });
 
 

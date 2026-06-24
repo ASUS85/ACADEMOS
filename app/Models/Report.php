@@ -54,25 +54,6 @@ class Report extends Model
     {
         return $this->hasOne(Jury::class);
     }
-    // ⭐ NOUVEAU : Tous les membres du jury (1-4)
-    // Dans app/Models/Report.php
-    public function juryMembers()
-    {
-        return $this->belongsToMany(User::class, 'report_jury', 'report_id', 'user_id')
-            ->withPivot('is_president')
-            ->withTimestamps()
-            ->orderBy('pivot_is_president', 'desc');
-    }
-
-
-    // Président du jury via table pivot (recommandé)
-    public function juryPresidentRelation()
-    {
-        return $this->belongsToMany(User::class, 'jury_report')
-            ->wherePivot('is_president', true)
-            ->withTimestamps();
-    }
-
     public function versions()
     {
         return $this->hasMany(ReportVersion::class)->orderBy('created_at', 'desc');
@@ -80,7 +61,11 @@ class Report extends Model
 
     public function getJuryPresidentAttribute()
     {
-        return $this->juryMembers()->wherePivot('is_president', true)->first();
+        $jury = $this->relationLoaded('juryGroup')
+            ? $this->juryGroup
+            : $this->juryGroup()->with('members')->first();
+
+        return $jury?->members->firstWhere('pivot.role', 'president');
     }
 
     public function latestVersion()

@@ -217,7 +217,7 @@
                             @endphp
 
                             <div class="col-xl-4 col-lg-6">
-                                <div class="report-card h-100 card border-0 shadow-lg rounded-3 overflow-hidden">
+                                <div class="report-card h-100 card border-0 shadow-lg rounded-3 overflow-hidden" data-report="{{ json_encode($report->load(['versions','student','teacher','comments','juryGroup'])) }}">
                                     <div class="card-body p-4">
                                         {{-- Étudiant + Titre --}}
                                         <div class="d-flex align-items-start mb-4">
@@ -313,14 +313,13 @@
 
                                         {{-- ✅ BOUTON COMMENTAIRES --}}
                                         <hr class="my-3">
-                                        <div class="text-center">
-                                            <button class="btn btn-outline-primary btn-modern w-100"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#commentsModal{{ $report->id }}">
-                                                <i class="fas fa-comments me-2"></i>
-                                                Commentaires ({{ $report->comments_count }})
-                                            </button>
-                                        </div>
+                                            <div class="text-center">
+                                                <button class="btn btn-outline-primary btn-modern w-100 btn-open-report"
+                                                    data-report-id="{{ $report->id }}">
+                                                    <i class="fas fa-eye me-2"></i>
+                                                    Voir le rapport
+                                                </button>
+                                            </div>
                                     </div>
                                 </div>
 
@@ -502,8 +501,8 @@
                                                 <button class="btn btn-secondary"
                                                     data-bs-dismiss="modal">Annuler</button>
 
-                                                <button class="btn btn-success"
-                                                    onclick="submitJury({{ $report->id }})">
+                                                <button class="btn btn-success btn-validate-jury"
+                                                    data-report-id="{{ $report->id }}">
                                                     ✅ Valider le jury
                                                 </button>
                                             </div>
@@ -526,6 +525,15 @@
 
     {{-- ✅ JS COMPLÈT --}}
     <script>
+        document.querySelectorAll('.btn-validate-jury').forEach(btn => {
+            btn.addEventListener('click', function() {
+                console.log('click jury', this.dataset.reportId);
+                const reportId = this.dataset.reportId;
+                submitJury(reportId);
+            });
+
+        });
+
         function showToast(message, type = 'success') {
             const toast = new bootstrap.Toast(document.getElementById('liveToast'));
             document.getElementById('toast-message').innerHTML =
@@ -536,7 +544,6 @@
         }
 
         function submitJury(reportId) {
-
             const president = document.getElementById(`president_${reportId}`).value;
             const rapporteur = document.getElementById(`rapporteur_${reportId}`).value;
 
@@ -544,11 +551,12 @@
                 return showToast("Veuillez sélectionner président et rapporteur", "danger");
             }
 
-            fetch(`/reports/${reportId}/assign-jury`, {
+            fetch(`{{ url('/reports')}}/${reportId}/assign-jury`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
                         president_id: president,
@@ -558,11 +566,16 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        showToast("Jury assigné avec succès");
+                        showToast(data.message || "Jury assigné avec succès");
                         location.reload();
+                    } else {
+                        showToast(data.message || "Erreur", "danger");
                     }
-                });
+                })
+                .catch(() => showToast('Erreur réseau', 'danger'));
         }
+
+
 
         function assignTeacher(reportId) {
             const teacherId = document.getElementById(`teacher_${reportId}`).value;
@@ -614,67 +627,6 @@
                 });
         }
 
-        public
-        function assignJury(Request $request, Report $report) {
-            $request - > validate([
-                'president_id' => 'required|exists:users,id',
-                'rapporteur_id' => 'required|exists:users,id',
-            ]);
-
-            // ✅ Vérifier statut
-            if ($report - > status !== 'Validé') {
-                return response() - > json([
-                    'success' => false,
-                    'message' => '❌ Le rapport doit être validé avant d\'assigner un jury'
-                ], 422);
-            }
-
-            // ✅ Empêcher doublon
-            if ($request - > president_id == $request - > rapporteur_id) {
-                return response() - > json([
-                    'success' => false,
-                    'message' => '❌ Président et rapporteur doivent être différents'
-                ], 422);
-            }
-
-            // ✅ Créer ou récupérer jury
-            $jury = \App\ Models\ Jury::updateOrCreate(
-                ['report_id' => $report - > id],
-                ['department_id' => auth() - > user() - > department_id]
-            );
-
-            // 🔥 Reset membres
-            $jury - > members() - > detach();
-
-            // ✅ Ajouter encadreur
-            if ($report - > teacher_id) {
-                $jury - > members() - > attach($report - > teacher_id, [
-                    'role' => 'encadreur'
-                ]);
-            }
-
-            // ✅ Ajouter président
-            $jury - > members() - > attach($request - > president_id, [
-                'role' => 'president'
-            ]);
-
-            // ✅ Ajouter rapporteur
-            $jury - > members() - > attach($request - > rapporteur_id, [
-                'role' => 'membre'
-            ]);
-
-            // ✅ Mise à jour status
-            $report - > update([
-                'status' => 'En attente jury'
-            ]);
-
-            return response() - > json([
-                'success' => true,
-                'message' => '✅ Jury constitué avec succès'
-            ]);
-        }
-
-
         function addComment(reportId) {
             showToast('Fonctionnalité en développement', 'info');
         }
@@ -692,7 +644,7 @@
         });
 
         // ⭐ JURY MODAL FUNCTIONS
-        let juryData_{{ $report->id }} = @json(\App\Models\User::role(['teacher', 'jury'])->where('department_id', auth()->user()->department_id)->get());
+        // Variable définie dynamiquement dans les modals correspondants, pas de valeur globale nécessaire ici.
 
         function filterJury(reportId) {
             const dept = document.getElementById(`jury_dept_${reportId}`).value;
@@ -789,6 +741,86 @@
                     }
                     updateJuryCount(reportId);
                 });
+            });
+        });
+
+        // OUVERTURE D'UN MODAL DE DÉTAIL GLOBAL
+        const detailModalHtml = `
+        <div class="modal fade" id="reportDetailModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content rounded-4">
+                    <div class="modal-header bg-gradient-to-r from-primary to-info text-white">
+                        <h5 class="modal-title">Détails du rapport</h5>
+                        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="reportDetailContent">Chargement...</div>
+                    </div>
+                    <div class="modal-footer bg-light border-0 rounded-bottom-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        // Append modal once
+        if (!document.getElementById('reportDetailModal')) {
+            document.body.insertAdjacentHTML('beforeend', detailModalHtml);
+        }
+
+        document.querySelectorAll('.btn-open-report').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const card = this.closest('.report-card');
+                const data = card ? card.dataset.report : null;
+                if (!data) return;
+                const report = JSON.parse(data);
+
+                // Build content
+                let html = `
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="fw-bold">${report.title || 'Rapport'}</h5>
+                            <p class="text-muted mb-2">Auteur: ${report.student?.name || 'N/A'} — ${report.student?.email || ''}</p>
+                            <p class="small text-muted">Statut: <strong>${report.status || 'N/A'}</strong></p>
+                            <hr>
+                            <h6>Versions & Documents</h6>
+                            <div class="list-group mb-3">
+                `;
+
+                // fichier principal
+                if (report.file_path) {
+                    html += `<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="${window.location.origin}/storage/${report.file_path}" target="_blank">Fichier soumis (original)<span class="badge bg-danger">Télécharger</span></a>`;
+                }
+
+                // versions
+                if (report.versions && report.versions.length) {
+                    report.versions.forEach(v => {
+                        html += `<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="${window.location.origin}/storage/${v.file_path}" target="_blank">${v.version || 'version'} — ${new Date(v.created_at).toLocaleString()}<span class="badge bg-secondary">Télécharger</span></a>`;
+                    });
+                } else {
+                    html += `<div class="list-group-item text-muted">Aucune version supplémentaire</div>`;
+                }
+
+                html += `</div></div>`;
+
+                // right column: metadata + actions
+                html += `<div class="col-md-4">`;
+                html += `<h6>Meta</h6><ul class="list-unstyled small text-muted">`;
+                html += `<li>Soumis le: ${new Date(report.created_at).toLocaleString()}</li>`;
+                html += `<li>Dernière mise à jour: ${new Date(report.updated_at).toLocaleString()}</li>`;
+                if (report.teacher) html += `<li>Encadreur: ${report.teacher.name}</li>`;
+                if (report.juryGroup && report.juryGroup.members) html += `<li>Jury: ${report.juryGroup.members.length} membre(s)</li>`;
+                html += `</ul>`;
+                html += `<div class="mt-3">`;
+                if (report.file_path) html += `<a href="${window.location.origin}/storage/${report.file_path}" target="_blank" class="btn btn-primary w-100 mb-2">Télécharger fichier</a>`;
+                html += `</div></div>`;
+
+                html += `</div>`;
+
+                document.getElementById('reportDetailContent').innerHTML = html;
+                const modalEl = document.getElementById('reportDetailModal');
+                const bsModal = new bootstrap.Modal(modalEl);
+                bsModal.show();
             });
         });
     </script>

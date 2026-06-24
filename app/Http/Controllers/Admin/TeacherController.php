@@ -39,6 +39,7 @@ class TeacherController extends Controller
             'email' => $request->email,
             'matricule' => $request->matricule,
             'grade' => $request->grade,
+            'filiere_id' => (int)$request->specialite,
             'specialite' => (int)$request->specialite,
             'sexe' => $request->sexe,
             'department_id' => auth()->user()->department_id,
@@ -75,16 +76,29 @@ class TeacherController extends Controller
             abort(403);
         }
 
-        $teacher->update($request->only([
-            'name',
-            'email',
-            'matricule',
-            'grade',
-            'specialite',
-            'sexe'
-        ]));
+        $data = $request->only(['name', 'email', 'matricule', 'grade', 'specialite', 'sexe']);
+
+        if ($request->filled('specialite')) {
+            $data['filiere_id'] = (int) $request->specialite;
+        }
+
+        $teacher->update($data);
 
         return back()->with('success', 'Mis à jour');
+    }
+
+    public function edit(User $teacher)
+    {
+        if (
+            $teacher->department_id != auth()->user()->department_id &&
+            $teacher->created_by != auth()->id()
+        ) {
+            abort(403);
+        }
+
+        $filieres = Filiere::where('department_id', auth()->user()->department_id)->get();
+
+        return view('admin.teachers.edit', compact('teacher', 'filieres'));
     }
 
 

@@ -6,6 +6,7 @@ use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Models\Jury;
 
 class ReportController extends Controller
 {
@@ -119,6 +120,10 @@ class ReportController extends Controller
      */
     public function teacherComment(Request $request, Report $report)
     {
+        if (!auth()->user()->hasRole('teacher') || $report->teacher_id !== auth()->id()) {
+            abort(403);
+        }
+
         $request->validate([
             'comment' => 'required|string|max:1000',
             'action' => 'required|in:commenter,valider'
@@ -152,10 +157,21 @@ class ReportController extends Controller
      */
     public function assign(Request $request, Report $report)
     {
+        if (!auth()->user()->hasAnyRole(['admin', 'superadmin'])) {
+            abort(403);
+        }
+
         $request->validate(['teacher_id' => 'required|exists:users,id']);
 
+        $teacher = User::role('teacher')
+            ->where('id', $request->teacher_id)
+            ->when(auth()->user()->hasRole('admin'), function ($query) {
+                $query->where('department_id', auth()->user()->department_id);
+            })
+            ->firstOrFail();
+
         $report->update([
-            'teacher_id' => $request->teacher_id,
+            'teacher_id' => $teacher->id,
             'status' => 'Affecté'
         ]);
 
@@ -170,6 +186,10 @@ class ReportController extends Controller
      */
     public function removeTeacher(Report $report)
     {
+        if (!auth()->user()->hasAnyRole(['admin', 'superadmin'])) {
+            abort(403);
+        }
+
         $report->teacher_id = null;
         $report->status = 'Soumis';
         $report->save();
@@ -185,57 +205,89 @@ class ReportController extends Controller
      */
     public function assignJury(Request $request, Report $report)
     {
-        $request->validate([
-            'jury_ids' => ['required', 'array', 'min:1', 'max:4'],
-            'jury_ids.*' => ['integer', 'exists:users,id'],
+        if (!auth()->user()->hasAnyRole(['admin', 'superadmin'])) {
+            abort(403);
+        }
+
+        // 1) Vérifier que le rapport est validé
+        if ($report->status !== Report::STATUS_VALIDATED) {
+            return response()->json([
+                'success' => false,
+                'message' => "❌ Le rapport doit être validé avant d'assigner un jury"
+            ], 422);
+        }
+
+        // 2) Valider les champs (on passe à president_id / rapporteur_id)
+        $validated = $request->validate([
+            'president_id'  => ['required', 'integer', 'different:rapporteur_id', 'exists:users,id'],
+            'rapporteur_id' => ['required', 'integer', 'exists:users,id'],
+            'member_ids' => ['nullable', 'array', 'max:2'],
+            'member_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
-        $juryIds = array_filter($request->jury_ids);
+        $memberIds = collect($validated['member_ids'] ?? [])
+            ->push((int) $validated['president_id'])
+            ->push((int) $validated['rapporteur_id'])
+            ->when($report->teacher_id, fn($ids) => $ids->push((int) $report->teacher_id))
+            ->unique()
+            ->values();
 
-        // Vérifier encadreur
-        if ($report->teacher_id && in_array($report->teacher_id, $juryIds)) {
+        if ($memberIds->count() > 4) {
             return response()->json([
                 'success' => false,
-                'message' => "❌ L'encadreur ne peut pas faire partie du jury."
+                'message' => '❌ Le jury ne peut pas dépasser 4 enseignants'
             ], 422);
         }
 
-        // Vérifier rôles
-        $members = User::whereIn('id', $juryIds)
-            ->where(function ($query) {
-                $query->whereHas('roles', function ($q) {
-                    $q->where('name', 'teacher');
-                })->orWhereHas('roles', function ($q) {
-                    $q->where('name', 'jury');
-                });
+        $teachersCount = User::role('teacher')
+            ->whereIn('id', $memberIds)
+            ->when(auth()->user()->hasRole('admin'), function ($query) {
+                $query->where('department_id', auth()->user()->department_id);
             })
-            ->get();
+            ->count();
 
-        if ($members->count() !== count($juryIds)) {
+        if ($teachersCount !== $memberIds->count()) {
             return response()->json([
                 'success' => false,
-                'message' => "❌ Certains membres n'ont pas le rôle 'teacher' ou 'jury'."
+                'message' => '❌ Le jury doit être constitué uniquement d’enseignants du département'
             ], 422);
         }
 
-        // ✅ ÇA MARCHE MAINTENANT !
-        $report->juryMembers()->detach();
+        // 3) Créer / récupérer le jury pour ce rapport
+        $jury = Jury::updateOrCreate(
+            ['report_id' => $report->id],
+            ['department_id' => $report->student?->department_id ?? auth()->user()->department_id]
+        );
 
-        $presidentId = $juryIds[0];
-        foreach ($juryIds as $index => $userId) {
-            $report->juryMembers()->attach((int)$userId, [
-                'is_president' => ($index === 0)
-            ]);
+        // 4) Réinitialiser les membres
+        $jury->members()->detach();
+
+        $extraMemberIds = collect($validated['member_ids'] ?? [])->unique();
+
+        if ($report->teacher_id) {
+            $jury->members()->attach($report->teacher_id, ['role' => 'encadreur']);
         }
 
+        $jury->members()->syncWithoutDetaching([
+            $validated['president_id'] => ['role' => 'president'],
+            $validated['rapporteur_id'] => ['role' => 'rapporteur'],
+        ]);
+
+        foreach ($extraMemberIds as $memberId) {
+            if (!$jury->members()->where('users.id', $memberId)->exists()) {
+                $jury->members()->attach($memberId, ['role' => 'membre']);
+            }
+        }
+
+        // 5) Mettre à jour le statut du rapport
         $report->update([
-            'jury_id' => $presidentId,
-            'status' => 'En attente jury'
+            'status'  => Report::STATUS_JURY_PENDING,
+            'jury_id' => $validated['president_id'], // compatibilité : président du jury
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => "✅ Jury affecté ! (" . count($juryIds) . " membre(s))"
+            'message' => '✅ Jury constitué avec succès'
         ]);
     }
 
@@ -248,12 +300,14 @@ class ReportController extends Controller
      */
     public function getJuryMembers(Report $report)
     {
-        $jury = $report->juryMembers()->get();
-        return response()->json($jury->map(function ($member) {
+        $members = $report->juryGroup?->members ?? collect();
+
+        return response()->json($members->map(function ($member) {
             return [
                 'id' => $member->id,
                 'name' => $member->name,
-                'is_president' => $member->pivot->is_president,
+                'role' => $member->pivot->role,
+                'is_president' => $member->pivot->role === 'president',
                 'roles' => $member->getRoleNames()->toArray()
             ];
         }));
@@ -266,7 +320,16 @@ class ReportController extends Controller
      */
     public function juryIndex()
     {
-        $reports = auth()->user()->juryReports()->with(['student', 'teacher'])->latest()->get();
+        if (!auth()->user()->hasAnyRole(['teacher', 'jury'])) {
+            abort(403);
+        }
+
+        $reports = auth()->user()->juryReports()
+            ->with(['student.filiere', 'teacher', 'juryGroup.members'])
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
         return view('jury.reports.index', compact('reports'));
     }
 
@@ -275,6 +338,10 @@ class ReportController extends Controller
      */
     public function juryEvaluate(Request $request, Report $report)
     {
+        if (!auth()->user()->hasAnyRole(['teacher', 'jury']) || !$report->juryGroup?->members->contains('id', auth()->id())) {
+            abort(403);
+        }
+
         $request->validate([
             'jury_technical_note' => 'required|numeric|min:0|max:20',
             'jury_presentation_note' => 'required|numeric|min:0|max:20',
@@ -307,14 +374,47 @@ class ReportController extends Controller
         return redirect()->back()->with('success', "✅ Évaluation terminée ! Moyenne: {$moyenne}/20 ({$appreciation})");
     }
 
+    public function addJuryMember(Request $request)
+    {
+        if (!auth()->user()->hasAnyRole(['admin', 'superadmin'])) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'unique:users,email'],
+        ]);
+
+        $departmentId = auth()->user()->department_id;
+
+        $teacher = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'] ?? \Str::slug($validated['name']) . '+teacher-' . now()->timestamp . '@academos.local',
+            'password' => bcrypt('password123'),
+            'department_id' => $departmentId,
+            'role_name' => 'teacher',
+        ]);
+
+        $teacher->assignRole('teacher');
+
+        return response()->json([
+            'success' => true,
+            'user' => [
+                'id' => $teacher->id,
+                'name' => $teacher->name,
+            ],
+        ]);
+    }
+
     /**
      * Index administrateur
      */
-    public function adminIndex(Request $request)
+    public function adminIndex(Request $request, Report $report)
     {
+
         $user = auth()->user();
 
-        $query = Report::with(['student.filiere', 'teacher', 'comments.user', 'juryGroup.members', 'juryMembers']);
+        $query = Report::with(['student.filiere', 'teacher', 'comments.user', 'juryGroup.members']);
 
         // Filtre département admin
         $query->whereHas('student', function ($q) use ($user) {
@@ -331,7 +431,7 @@ class ReportController extends Controller
         // Filtre niveau
         if ($request->filled('level')) {
             $query->whereHas('student', function ($q) use ($request) {
-                $q->where('level', $request->level);
+                $q->where('niveau', $request->level);
             });
         }
 
@@ -340,13 +440,22 @@ class ReportController extends Controller
         // récupérer filières du département
         $filieres = \App\Models\Filiere::where('department_id', $user->department_id)->get();
 
-        return view('admin.reports.index', compact('reports', 'filieres'));
+        //récuperer les teachers
+        $teachers = User::role('teacher')->where('department_id', $user->department_id)->get();
+
+        return view('admin.reports.index', compact('reports', 'filieres', 'teachers'));
     }
 
     public function superadminReports()
     {
-        $reports = Report::with('student')->latest()->get();
-        return view('admin.reports.index', compact('reports'));
+        $reports = Report::with(['student.filiere', 'teacher', 'comments.user', 'juryGroup.members'])
+            ->latest()
+            ->withCount('comments')
+            ->paginate(10)
+            ->withQueryString();
+        $teachers = User::role('teacher')->get();
+
+        return view('admin.reports.index', compact('reports', 'teachers'));
     }
 
     /**

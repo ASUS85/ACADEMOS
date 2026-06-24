@@ -5,6 +5,7 @@
             border: 0;
             box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
         }
+
         .table thead th {
             border-bottom: 0;
             font-size: 0.75rem;
@@ -13,12 +14,15 @@
             color: #6b7280;
             background: #f9fafb;
         }
+
         .table-hover tbody tr:hover {
             background-color: #f3f4ff;
         }
+
         .avatar-ring {
-            box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
         }
+
         .btn-icon {
             width: 32px;
             height: 32px;
@@ -27,13 +31,17 @@
             align-items: center;
             justify-content: center;
         }
+        #add-teacher{
+            cursor: pointer;
+        }
     </style>
 
     <div class="bg-light py-3 px-3 px-md-4">
         {{-- Header --}}
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div class="d-flex align-items-center">
-                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width:56px;height:56px;">
+                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3"
+                    style="width:56px;height:56px;">
                     <i class="fas fa-chalkboard-teacher fa-lg"></i>
                 </div>
                 <div>
@@ -44,10 +52,13 @@
                 </div>
             </div>
 
-            <a href="{{ route('admin.teachers.create') }}" class="btn btn-primary d-flex align-items-center gap-2 rounded-pill">
+            <button type="button" id="add-teacher" class="btn btn-primary d-flex align-items-center gap-2 rounded-pill"
+                data-bs-toggle="modal" data-bs-target="#createTeacherModal">
                 <i class="fas fa-plus"></i>
                 <span>Nouvel enseignant</span>
-            </a>
+            </button>
+
+
         </div>
 
         <div class="card card-neo">
@@ -59,7 +70,8 @@
                         <select name="filiere" class="form-select">
                             <option value="">Toutes les filières</option>
                             @foreach ($filieres as $f)
-                                <option value="{{ $f->id }}" {{ request('filiere') == $f->id ? 'selected' : '' }}>
+                                <option value="{{ $f->id }}"
+                                    {{ request('filiere') == $f->id ? 'selected' : '' }}>
                                     {{ $f->name }}
                                 </option>
                             @endforeach
@@ -68,9 +80,8 @@
 
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold text-muted text-uppercase">Recherche</label>
-                        <input type="text" name="search" class="form-control"
-                               placeholder="Nom ou email..."
-                               value="{{ request('search') }}">
+                        <input type="text" name="search" class="form-control" placeholder="Nom ou email..."
+                            value="{{ request('search') }}">
                     </div>
 
                     <div class="col-md-4">
@@ -106,8 +117,8 @@
                                 <td class="ps-4">
                                     <div class="d-flex align-items-center">
                                         <img src="https://ui-avatars.com/api/?name={{ urlencode($teacher->name) }}&background=2563EB&color=fff&size=40&rounded=true"
-                                             class="rounded-circle me-3 avatar-ring"
-                                             width="40" height="40" alt="Avatar">
+                                            class="rounded-circle me-3 avatar-ring" width="40" height="40"
+                                            alt="Avatar">
                                         <div>
                                             <div class="fw-semibold text-dark">{{ $teacher->name }}</div>
                                             <small class="text-muted">Enseignant</small>
@@ -134,13 +145,12 @@
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-2">
                                         <a href="{{ route('admin.teachers.edit', $teacher) }}"
-                                           class="btn btn-light border btn-icon" title="Modifier">
+                                            class="btn btn-light border btn-icon" title="Modifier">
                                             <i class="fas fa-pen text-primary"></i>
                                         </a>
 
-                                        <form action="{{ route('admin.teachers.destroy', $teacher) }}"
-                                              method="POST" class="d-inline"
-                                              onsubmit="return confirm('Supprimer cet enseignant ?')">
+                                        <form action="{{ route('admin.teachers.destroy', $teacher) }}" method="POST"
+                                            class="d-inline" onsubmit="return confirm('Supprimer cet enseignant ?')">
                                             @csrf
                                             @method('DELETE')
                                             <button class="btn btn-light border btn-icon" title="Supprimer">
@@ -164,11 +174,160 @@
                 </table>
             </div>
 
-            @if(method_exists($teachers, 'links'))
+            @if (method_exists($teachers, 'links'))
                 <div class="card-footer bg-white border-0 pt-3 d-flex justify-content-end">
                     {{ $teachers->links('pagination::bootstrap-5') }}
                 </div>
             @endif
         </div>
     </div>
+
+    {{-- MODAL CRÉATION ENSEIGNANT --}}
+    <div class="modal fade" id="createTeacherModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg">
+                <div class="modal-header bg-gradient-to-r from-primary to-info text-white rounded-top-4 border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-chalkboard-teacher me-2"></i>Nouvel enseignant
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+
+                <form method="POST" action="{{ route('admin.teachers.store') }}">
+                    @csrf
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+
+                            {{-- NOM --}}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted mb-2">Nom complet <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" name="name"
+                                    class="form-control @error('name') is-invalid @enderror"
+                                    placeholder="Ex: Jean DUPONT" value="{{ old('name') }}" required>
+                                @error('name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- EMAIL --}}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted mb-2">Email <span
+                                        class="text-danger">*</span></label>
+                                <input type="email" name="email"
+                                    class="form-control @error('email') is-invalid @enderror"
+                                    placeholder="Ex: jean.dupont@univ.cm" value="{{ old('email') }}" required>
+                                @error('email')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- MATRICULE --}}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted mb-2">Matricule <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" name="matricule"
+                                    class="form-control @error('matricule') is-invalid @enderror"
+                                    placeholder="Ex: ENS-2024-001" value="{{ old('matricule') }}" required>
+                                @error('matricule')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- GRADE --}}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted mb-2">Grade <span
+                                        class="text-danger">*</span></label>
+                                <select name="grade" class="form-select @error('grade') is-invalid @enderror"
+                                    required>
+                                    <option value="">Choisir un grade</option>
+                                    <option value="Professeur" {{ old('grade') == 'Professeur' ? 'selected' : '' }}>
+                                        Professeur</option>
+                                    <option value="Maître de conférences"
+                                        {{ old('grade') == 'Maître de conférences' ? 'selected' : '' }}>Maître de
+                                        conférences</option>
+                                    <option value="Chargé de cours"
+                                        {{ old('grade') == 'Chargé de cours' ? 'selected' : '' }}>Chargé de cours
+                                    </option>
+                                    <option value="Assistant" {{ old('grade') == 'Assistant' ? 'selected' : '' }}>
+                                        Assistant</option>
+                                </select>
+                                @error('grade')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- SPÉCIALITÉ (filiere_id) --}}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted mb-2">Spécialité <span
+                                        class="text-danger">*</span></label>
+                                <select name="specialite"
+                                    class="form-select @error('specialite') is-invalid @enderror" required>
+                                    <option value="">Choisir une spécialité</option>
+                                    @foreach ($filieres as $filiere)
+                                        <option value="{{ $filiere->id }}"
+                                            {{ old('specialite') == $filiere->id ? 'selected' : '' }}>
+                                            {{ $filiere->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('specialite')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- SEXE --}}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted mb-2">Sexe <span
+                                        class="text-danger">*</span></label>
+                                <select name="sexe" class="form-select @error('sexe') is-invalid @enderror"
+                                    required>
+                                    <option value="">Choisir le sexe</option>
+                                    <option value="M" {{ old('sexe') == 'M' ? 'selected' : '' }}>Masculin
+                                    </option>
+                                    <option value="F" {{ old('sexe') == 'F' ? 'selected' : '' }}>Féminin</option>
+                                </select>
+                                @error('sexe')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                        </div>
+
+                        <div class="alert alert-info mt-3 border-0 rounded-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Mot de passe par défaut :</strong> <code>password123</code><br>
+                            <small>L'enseignant pourra le modifier dans son profil.</small>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light border-top rounded-bottom-4 px-4 py-3">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fas fa-save me-2"></i>Créer l'enseignant
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+        <script>
+            const addTeacher = document.getElementById("add-teacher");
+
+            addTeacher.addEventListener('click', function(){
+                const modal = new bootstrap.Modal(document.getElementById('createTeacherModal'));
+                modal.show();
+            });
+
+           /*  document.addEventListener('DOMContentLoaded', function() {
+                const modal = new bootstrap.Modal(document.getElementById('createTeacherModal'));
+                modal.show();
+            }); */
+        </script>
+
+
 </x-app-layout>

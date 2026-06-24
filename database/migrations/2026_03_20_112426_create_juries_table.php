@@ -22,7 +22,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('jury_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->enum('role', ['president', 'encadreur', 'membre']);
+            $table->enum('role', ['president', 'encadreur', 'rapporteur', 'membre']);
 
             $table->timestamps();
         });

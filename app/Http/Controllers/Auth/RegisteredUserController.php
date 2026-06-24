@@ -52,7 +52,9 @@ class RegisteredUserController extends Controller
             'matricule' => $request->matricule,
             'password' => Hash::make($request->password),
             'department_id' => $request->department_id,
-            'specialite' => $filiere->id
+            'filiere_id' => $filiere->id,
+            'specialite' => $filiere->id,
+            'role_name' => 'student',
         ]);
 
         //  ASSIGNE RÔLE ÉTUDIANT AUTOMATIQUEMENT
