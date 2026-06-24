@@ -288,6 +288,7 @@ class ReportController extends Controller
         return response()->json([
             'success' => true,
             'message' => '✅ Jury constitué avec succès'
+            'message' => '✅ Jury constitué avec succès'
         ]);
     }
 
@@ -410,7 +411,9 @@ class ReportController extends Controller
      * Index administrateur
      */
     public function adminIndex(Request $request, Report $report)
+    public function adminIndex(Request $request, Report $report)
     {
+
 
         $user = auth()->user();
 
@@ -440,6 +443,10 @@ class ReportController extends Controller
         // récupérer filières du département
         $filieres = \App\Models\Filiere::where('department_id', $user->department_id)->get();
 
+        //récuperer les teachers
+        $teachers = User::role('teacher')->where('department_id', $user->department_id)->get();
+
+        return view('admin.reports.index', compact('reports', 'filieres', 'teachers'));
         //récuperer les teachers
         $teachers = User::role('teacher')->where('department_id', $user->department_id)->get();
 
