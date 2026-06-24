@@ -6,6 +6,7 @@
             box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
         }
 
+
         .table thead th {
             border-bottom: 0;
             font-size: 0.75rem;
@@ -15,13 +16,17 @@
             background: #f9fafb;
         }
 
+
         .table-hover tbody tr:hover {
             background-color: #f3f4ff;
         }
 
+
         .avatar-ring {
             box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
         }
+
 
         .btn-icon {
             width: 32px;
@@ -35,6 +40,7 @@
             cursor: pointer;
         }
     </style>
+
 
     <div class="bg-light py-3 px-3 px-md-4">
         {{-- Header --}}
@@ -87,10 +93,10 @@
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold text-muted text-uppercase">&nbsp;</label>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-primary flex-grow-1">
+                            <button class="btn btn-primary flex-grow-1" data-loader-target="#globalLoader">
                                 <i class="fas fa-filter me-1"></i> Filtrer
                             </button>
-                            <a href="{{ route('admin.teachers.index') }}" class="btn btn-outline-secondary">
+                            <a href="{{ route('admin.teachers.index') }}" class="btn btn-outline-secondary" data-loader-target="#globalLoader">
                                 <i class="fas fa-undo me-1"></i> Reset
                             </a>
                         </div>
@@ -105,8 +111,10 @@
                         <tr>
                             <th class="ps-4">Enseignant</th>
                             <th>Email</th>
-                            <th>Spécialité / Filière</th>
+                            <th>Spécialité</th>
+                            <th>Matière</th>
                             <th>Matricule</th>
+                            <th>Sexe</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -126,21 +134,62 @@
                                     </div>
                                 </td>
 
-                                <td class="text-muted small">
-                                    {{ $teacher->email }}
-                                </td>
+                            <td class="text-muted small">
+                                {{ $teacher->email }}
+                            </td>
 
-                                <td>
-                                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2">
-                                        {{ $teacher->filiere->name ?? ($teacher->specialite ?? '-') }}
-                                    </span>
-                                </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm dropdown-toggle px-0" type="button" id="dropdownMenuButton{{ $teacher->id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Spécialités
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ $teacher->id }}">
+                                        {{-- Spécialités (filières) --}}
+                                        @if($teacher->filieres->count())
+                                        <li>
+                                            <h6 class="dropdown-header">Spécialités</h6>
+                                        </li>
+                                        @foreach($teacher->filieres as $filiere)
+                                        <li><span class="dropdown-item">{{ $filiere->name }}</span></li>
+                                        @endforeach
+                                        @else
+                                        <li><span class="dropdown-item text-muted">Aucune spécialité</span></li>
+                                        @endif
+                                    </ul>
+                                </div>
+                            </td>
 
-                                <td>
-                                    <span class="badge bg-light text-dark rounded-pill fw-semibold">
-                                        {{ $teacher->matricule ?? 'N/A' }}
-                                    </span>
-                                </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm dropdown-toggle px-0" type="button" id="dropdownMenuButton{{ $teacher->id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Matières
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ $teacher->id }}">
+                                        {{-- Matières --}}
+                                        @if($teacher->matieres->count())
+                                        <li>
+                                            <h6 class="dropdown-header">Matières</h6>
+                                        </li>
+                                        @foreach($teacher->matieres as $matiere)
+                                        <li><span class="dropdown-item">{{ $matiere->name }}</span></li>
+                                        @endforeach
+                                        @else
+                                        <li><span class="dropdown-item text-muted">Aucune matière</span></li>
+                                        @endif
+                                    </ul>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="badge bg-light text-dark rounded-pill fw-semibold">
+                                    {{ $teacher->matricule ?? 'N/A' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-10 text-dark rounded-pill px-3 py-2">
+                                    {{ $teacher->sexe ?? 'N/A' }}
+                                </span>
+                            </td>
 
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-2">
@@ -161,14 +210,14 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-5">
-                                    <div class="mb-3">
-                                        <i class="fas fa-chalkboard-teacher fa-3x opacity-50 text-primary"></i>
-                                    </div>
-                                    Aucun enseignant trouvé
-                                </td>
-                            </tr>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">
+                                <div class="mb-3">
+                                    <i class="fas fa-chalkboard-teacher fa-3x opacity-50 text-primary"></i>
+                                </div>
+                                Aucun enseignant trouvé
+                            </td>
+                        </tr>
                         @endforelse
                     </tbody>
                 </table>

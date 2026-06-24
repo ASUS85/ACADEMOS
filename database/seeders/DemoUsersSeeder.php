@@ -24,7 +24,10 @@ class DemoUsersSeeder extends Seeder
             'name'      => 'Super Admin',
             'email'     => 'superadmin@ispcb.cm',
             'password'  => $password,
+            'sexe'      => 'M',
+            'matricule' => 'MAT-SUPERADMIN-001',
             'role_name' => 'superadmin', // On écrit dans ta colonne
+            'grade'     => 'Docteur', // Spécifique aux enseignants, mais on peut laisser vide ou mettre une valeur par défaut
         ]);
         $superAdmin->assignRole('superadmin');
 
@@ -39,7 +42,11 @@ class DemoUsersSeeder extends Seeder
                     'email'         => "admin{$i}.dept{$dept->id}@ispcb.cm",
                     'password'      => $password,
                     'department_id' => $dept->id,
-                    'role_name'     => 'admin', // On écrit dans ta colonne
+                    'sexe'          => $i % 2 == 0 ? 'F' : 'M',
+                    'matricule' => 'ADM-' . $dept->id . '-' . $i,
+                    'role_name'     => 'admin', 
+                    'grade'         => 'PLEG', 
+                    'specialite'    => 'Administration',
                 ]);
                 $admin->assignRole('admin');
             }
@@ -51,7 +58,11 @@ class DemoUsersSeeder extends Seeder
                     'email'         => "teacher{$i}.dept{$dept->id}@ispcb.cm",
                     'password'      => $password,
                     'department_id' => $dept->id,
-                    'role_name'     => 'teacher', // On écrit dans ta colonne
+                    'sexe'          => $i % 2 == 0 ? 'F' : 'M', 
+                    'matricule'     => "MAT-TEACHER-" . $dept->id . '-' . $i . uniqid(),
+                    'role_name'     => 'teacher', 
+                    'grade'         => ['PLEG', 'MAGE', 'DOCT'][($i - 1) % 3], 
+                    'specialite'    => ['Informatique', 'Mathématiques', 'Physique'][($i - 1) % 3], 
                 ]);
                 $teacher->assignRole('teacher');
             }
@@ -64,10 +75,12 @@ class DemoUsersSeeder extends Seeder
                         'name'          => "Etudiant $i " . $filiere->name,
                         'email'         => "student{$i}.filiere{$filiere->id}@ispcb.cm",
                         'password'      => $password,
+                        'niveau'        => "$i",
                         'department_id' => $dept->id,
                         'filiere_id'    => $filiere->id,
-                        'matricule'     => "MAT-" . strtoupper(substr($filiere->name, 0, 3)) . "-$filiere->id-$i",
-                        'role_name'     => 'student', // On écrit dans ta colonne
+                        'sexe'          => $i % 2 == 0 ? 'F' : 'M', 
+                        'matricule'  => "STU-{$filiere->id}-{$i}-" . uniqid(),
+                        'role_name'     => 'student', 
                     ]);
                     $student->assignRole('student');
                 }

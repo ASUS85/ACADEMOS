@@ -192,6 +192,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/reports/add-jury-member', [ReportController::class, 'addJuryMember'])->name('reports.addJuryMember');
             Route::post('/juries/add-member', [JuryController::class, 'addJuryMember'])->name('juries.addMember');
 
+            Route::post('/reports/add-jury-member', [ReportController::class, 'addJuryMember'])->name('reports.addJuryMember');
+            Route::post('/juries/add-member', [JuryController::class, 'addJuryMember'])->name('juries.addMember');
+
         });
 
 

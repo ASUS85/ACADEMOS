@@ -30,6 +30,7 @@
             left: 0;
             right: 0;
             z-index: 1040;
+            height: 60px;
         }
 
         .sidebar {
@@ -40,7 +41,7 @@
             position: fixed;
             top: 60px;
             left: 0;
-            z-index: 2000;
+            z-index: 1040;
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
@@ -112,6 +113,7 @@
         }
 
         .content-area {
+            position: relative;
             margin-top: 60px;
             margin-left: 80px;
             padding: 30px;
@@ -155,7 +157,11 @@
 <body>
     <!-- TOPBAR -->
     {{-- <nav class="navbar navbar-dark bg-light px-4">
+    {{-- <nav class="navbar navbar-dark bg-light px-4">
         <img src="{{ asset('images/logo1.png') }}"
+    alt="Logo Academos"
+    width="80"
+    class="me-2">
     alt="Logo Academos"
     width="80"
     class="me-2">
@@ -175,7 +181,7 @@
             <i class="bi bi-list"></i>
         </div>
 
-        <a href="{{ route('dashboard') }}">
+        <a href="{{ route('dashboard') }}"  data-loader-target="#globalLoader">
             <i class="fa fa-house"></i>
             <span class="menu-text">Dashboard</span>
         </a>
@@ -263,10 +269,12 @@
 
         @default
         <span class="menu-text">Aucun menu disponible</span>
+        @default
+        <span class="menu-text">Aucun menu disponible</span>
         @endswitch
 
         <div class="mt-auto-custom">
-            <button type="button" class="logout-btn" data-bs-toggle="modal" data-bs-target="#logoutModal">
+            <button type="button" class="logout-btn" data-bs-toggle="modal">
                 <i class="fa fa-power-off" style="font-size: 18px; min-width: 40px;"></i>
                 <span class="menu-text">Déconnexion</span>
             </button>
@@ -289,7 +297,7 @@
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="btn btn-danger">Oui, me déconnecter</button>
+                        <button type="submit" class="btn btn-danger"  data-loader-target="#globalLoader">Oui, me déconnecter</button>
                     </form>
                 </div>
             </div>
@@ -299,6 +307,7 @@
 
 
     {{-- <div class="container-fluid min-vh-100 bg-light px-0">
+    {{-- <div class="container-fluid min-vh-100 bg-light px-0">
         @include('layouts.navigation')
 
         <!-- Page Heading -->
@@ -306,6 +315,9 @@
             <header class="bg-white shadow-sm border-bottom">
                 <div class="container py-4">
                     <h2 class="h3 fw-bold text-primary mb-0">{{ $header }}</h2>
+    </div>
+    </header>
+    @endisset
     </div>
     </header>
     @endisset
@@ -318,14 +330,32 @@
             </div>
         </div>
     </main>
+    <!-- Page Content -->
+    <main class="container my-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                {{ $slot }}
+            </div>
+        </div>
+    </main>
     </div> --}}
+
+
     <!-- Page Content -->
     <div class="content-area">
+        <div id="globalLoader">
+            <div class="loader-overlay">
+                <div class="loader-box">
+                    <div class="spinner-border loader-spinner text-secondary fw-bold" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
         {{ $slot }}
     </div>
 
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const sidebar = document.getElementById("sidebar");
@@ -337,7 +367,6 @@
 
     </script>
 
-
     @if (session('success'))
     <div id="toast-success" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999;">
         <div class="toast show border-0" style="background-color:#d1e7dd; color:#0f5132;">
@@ -348,7 +377,27 @@
             </div>
         </div>
     </div>
+    <div id="toast-success" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999;">
+        <div class="toast show border-0" style="background-color:#d1e7dd; color:#0f5132;">
+            <div class="d-flex">
+                <div class="toast-body">
+                    {{ session('success') }}
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        setTimeout(() => {
+            let toast = document.getElementById('toast-success');
+            if (toast) {
+                toast.style.transition = "opacity 0.5s";
+                toast.style.opacity = "0";
+                setTimeout(() => toast.remove(), 500);
+            }
+        }, 3000); // ⏱️ 3 secondes
+
+    </script>
     <script>
         setTimeout(() => {
             let toast = document.getElementById('toast-success');

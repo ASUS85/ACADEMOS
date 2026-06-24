@@ -183,27 +183,18 @@ class UserController extends Controller
 
     public function updateStudent(Request $request, User $user)
     {
-        if (!$user->hasRole('student')) abort(403);
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'matricule' => 'nullable|string|max:50|unique:users,matricule,' . $user->id,
-            'niveau' => 'nullable|string|max:20',
-            'filiere_id' => 'nullable|exists:filieres,id',
-            'department_id' => 'required|exists:departments,id',
-        ]);
-
+        
         $user->update($request->only([
             'name',
             'email',
             'matricule',
             'niveau',
             'filiere_id',
-            'department_id'
+            'department_id',
+            'sexe'
         ]));
 
-        return redirect()->route('superadmin.students.index')->with('success', '✅ Étudiant mis à jour');
+         return back()->with('success', 'Étudiant mis à jour avec succès ✅');
     }
 
     public function destroyStudent(User $user)

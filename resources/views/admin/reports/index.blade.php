@@ -503,6 +503,8 @@
 
                                                 <button class="btn btn-success btn-validate-jury"
                                                     data-report-id="{{ $report->id }}">
+                                                <button class="btn btn-success btn-validate-jury"
+                                                    data-report-id="{{ $report->id }}">
                                                     ✅ Valider le jury
                                                 </button>
                                             </div>
@@ -534,6 +536,15 @@
 
         });
 
+        document.querySelectorAll('.btn-validate-jury').forEach(btn => {
+            btn.addEventListener('click', function() {
+                console.log('click jury', this.dataset.reportId);
+                const reportId = this.dataset.reportId;
+                submitJury(reportId);
+            });
+
+        });
+
         function showToast(message, type = 'success') {
             const toast = new bootstrap.Toast(document.getElementById('liveToast'));
             document.getElementById('toast-message').innerHTML =
@@ -552,9 +563,12 @@
             }
 
             fetch(`{{ url('/reports')}}/${reportId}/assign-jury`, {
+            fetch(`{{ url('/reports')}}/${reportId}/assign-jury`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
@@ -567,13 +581,20 @@
                 .then(data => {
                     if (data.success) {
                         showToast(data.message || "Jury assigné avec succès");
+                        showToast(data.message || "Jury assigné avec succès");
                         location.reload();
+                    } else {
+                        showToast(data.message || "Erreur", "danger");
                     } else {
                         showToast(data.message || "Erreur", "danger");
                     }
                 })
                 .catch(() => showToast('Erreur réseau', 'danger'));
+                })
+                .catch(() => showToast('Erreur réseau', 'danger'));
         }
+
+
 
 
 

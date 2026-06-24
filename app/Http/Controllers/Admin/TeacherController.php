@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Filiere;
+use App\Models\Matiere;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule; //
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TeacherController extends Controller
 {
@@ -18,21 +20,31 @@ class TeacherController extends Controller
         $department = auth()->user()->department;
 
         $specialites = Filiere::where('department_id', $department->id)->get();
+        $filiere_id = $specialites->first();
+        $matieres = $filiere_id ? Matiere::where('filiere_id', $filiere_id->id)->get() : collect();
 
-        return view('admin.teachers.create', compact('department', 'specialites'));
+        return view('admin.teachers.create', compact('department', 'specialites', 'matieres'));
     }
 
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'email' => 'required|email|unique:users',
-            'matricule' => 'required|unique:users',
-            'grade' => 'required',
-            'specialite' => 'required|exists:filieres,id',
-            'sexe' => 'required'
-        ]);
+        Log::debug('Teacher store payload raw', $request->all());
+
+        try {
+            $validated = $request->validate([
+                'name'      => ['required', 'string', 'max:255'],
+                'email'     => ['required', 'email', 'max:255', 'unique:users,email'],
+                'matricule' => ['required', 'string', 'max:100', 'unique:users,matricule'],
+                'grade'     => ['required', 'string', 'max:100'],
+                'sexe'      => ['required', 'in:Homme,Femme'],
+                'filieres'  => ['nullable', 'array'],
+                'filieres.*' => ['integer', 'exists:filieres,id'],
+                'matieres'  => ['nullable', 'array'],
+                'matieres.*' => ['integer', 'exists:matieres,id'],
+            ]);
+
+            Log::debug('Validation OK', $validated);
 
         $teacher = User::create([
             'name' => $request->name,
@@ -47,11 +59,29 @@ class TeacherController extends Controller
             'created_by' => auth()->id()
         ]);
 
-        $teacher->assignRole('teacher');
+            $teacher->assignRole('teacher');
+            Log::debug('Role assigned');
 
-        return redirect()->route('admin.teachers.index')
-            ->with('success', 'Enseignant créé avec succès');
+            $teacher->filieres()->sync($validated['filieres'] ?? []);
+            Log::debug('Filieres synced');
+
+            $teacher->matieres()->sync($validated['matieres'] ?? []);
+            Log::debug('Matieres synced');
+
+           return back()->with('success', 'Enseignant créé avec succès ');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation failed', $e->errors());
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Store failed', [
+                'message' => $e->getMessage(),
+                'line'    => $e->getLine(),
+                'file'    => $e->getFile(),
+            ]);
+            throw $e;
+        }
     }
+
 
 
     public function index()
@@ -61,6 +91,7 @@ class TeacherController extends Controller
         $users = User::role('teacher')
             ->where('department_id', $departmentId)
             ->with('filiere')
+            ->latest()
             ->paginate(10);
 
         return view('admin.teachers.index', compact('users'));

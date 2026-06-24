@@ -3,9 +3,9 @@
         <!-- Menu Desktop -->
         <div class="collapse navbar-collapse" id="navbarNav">
             <!-- Logo - Route conditionnelle selon le rôle -->
-           <a href="{{ route('dashboard') }}">
+          {{--  <a href="{{ route('dashboard') }}">
                     <img src="{{ asset('images/academo.svg') }}" alt="Logo Academos" width="250">
-            </a>
+            </a> --}}
 
             <!-- Lien Bienvenue - Route conditionnelle -->
             <ul class="navbar-nav me-auto" style="margin-left: 33% !important;">

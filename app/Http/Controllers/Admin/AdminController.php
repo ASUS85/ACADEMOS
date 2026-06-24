@@ -9,6 +9,9 @@ use App\Models\Report;
 use App\Models\Department;
 use App\Models\Filiere;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
+use App\Models\Matiere;
 
 class AdminController extends Controller
 {
@@ -143,7 +146,8 @@ class AdminController extends Controller
         $users = User::query();
 
         //  Limiter au département de l'admin
-        $users->where('department_id', $adminDepartment);
+        $users->where('department_id', $adminDepartment)
+             ->with(['filiere', 'matieres']);
 
         // Ne montrer que students + teachers
         $users->whereHas('roles', function ($q) {
@@ -162,11 +166,18 @@ class AdminController extends Controller
             $users->where('specialite', $request->specialite);
         }
 
-        $users = $users->with(['roles', 'department', 'filiere'])->paginate(10);
+         // Filtre matière
+        if ($request->filled('matiere')) {
+            $users->whereHas('matieres', function ($q) use ($request) {
+                $q->where('matieres.id', $request->matiere);
+            });
+        }
 
-        $filieres = \App\Models\Filiere::where('department_id', $adminDepartment)->get();
+        $users = $users->with(['roles', 'department', 'filiere'])->latest()->paginate(10);
+        $filieres      = Filiere::where('department_id', $adminDepartment)->get();
+        $matieres      = Matiere::whereIn('filiere_id', $filieres->pluck('id'))->get();
 
-        return view('admin.admins.listUsers', compact('users', 'filieres'));
+        return view('admin.admins.listUsers', compact('users', 'filieres', 'matieres'));
     }
 
     public function studentsIndex(Request $request)
@@ -205,8 +216,9 @@ class AdminController extends Controller
 
         $query = User::role('teacher')
             ->where('department_id', $adminDepartment)
-            ->with('filiere');
+            ->with(['filiere', 'matieres']); // charger aussi les matières
 
+        // Recherche par nom/email
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -215,14 +227,65 @@ class AdminController extends Controller
             });
         }
 
+        // Filtre filière
         if ($request->filled('filiere')) {
-            $query->where('filiere_id', $request->filiere);
+            $query->whereHas('filieres', function ($q) use ($request) {
+                $q->where('filieres.id', $request->filiere);
+            });
+        }
+
+
+        // Filtre matière
+        if ($request->filled('matiere')) {
+            $query->whereHas('matieres', function ($q) use ($request) {
+                $q->where('matieres.id', $request->matiere);
+            });
         }
 
         $teachers      = $query->latest()->paginate(15)->withQueryString();
         $filieres      = Filiere::where('department_id', $adminDepartment)->get();
+        $matieres      = Matiere::whereIn('filiere_id', $filieres->pluck('id'))->get();
         $teachersCount = $query->count();
 
-        return view('admin.admins.listTeacher', compact('teachers', 'filieres', 'teachersCount'));
+        return view('admin.admins.listTeacher', compact('teachers', 'filieres', 'matieres', 'teachersCount'));
+    }
+
+
+
+    public function editStudent(User $student)
+    {
+        // Charger les relations utiles
+        $student->load('department', 'filiere', 'roles');
+
+        // Récupérer les filières du département de l’admin
+        $filieres = Filiere::where('department_id', auth()->user()->department_id)->get();
+
+        // Récupérer les départements
+        $departments = Department::all();
+
+        // Liste des niveaux possibles (tu peux adapter selon ton école)
+        $niveaux = ['Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2'];
+
+        return view('student.editStudent', compact('student', 'filieres', 'departments', 'niveaux'));
+    }
+
+    public function updateStudent(Request $request, User $student)
+    {
+        $request->validate([
+            'name'       => 'required|string|max:255',
+            'email'      => 'required|email|unique:users,email,' . $student->id,
+            'filiere_id' => 'nullable|exists:filieres,id',
+            'niveau'     => 'nullable|string|max:50',
+        ]);
+
+        $student->update([
+            'name'       => $request->name,
+            'email'      => $request->email,
+            'filiere_id' => $request->filiere_id,
+            'niveau'     => $request->niveau,
+        ]);
+
+        return redirect()->route('admin.studentsIndex')
+            ->with('success', 'Étudiant mis à jour avec succès ✅');
     }
 }
