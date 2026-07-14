@@ -402,11 +402,17 @@
             currentReportId = report.id;
             currentReportData = report;
 
+            const juryGroup = report.juryGroup || report.jury_group || {
+                members: []
+            };
+            currentReportData.juryGroup = juryGroup;
+            currentReportData.jury_group = juryGroup;
+
             const latestVersion = report.latest_version || {};
             const student = report.student || {};
             const filiere = student.filiere || {};
             const teacher = report.teacher || {};
-            const juryMembers = report.juryGroup && Array.isArray(report.juryGroup.members) ? report.juryGroup.members : [];
+            const juryMembers = Array.isArray(juryGroup.members) ? juryGroup.members : [];
 
             const previewFile = latestVersion.file_path || report.file_path || '';
             const previewUrl = button.dataset.previewUrl || '';
@@ -443,7 +449,7 @@
             if (juryMembersWrap) {
                 juryMembersWrap.innerHTML = juryMembers.length ?
                     juryMembers.map((member) => {
-                        const role = member.pivot.role || 'membre';
+                        const role = (member.pivot && member.pivot.role) || member.role || 'membre';
                         return `<span class="badge bg-light text-dark border">${member.name} • ${role}</span>`;
                     }).join('') :
                     '<span class="text-muted small">Aucun membre affecté</span>';
@@ -521,7 +527,10 @@
             const memberSelect1 = document.getElementById('juryMemberSelect1');
             const memberSelect2 = document.getElementById('juryMemberSelect2');
             const reportTeacher = currentReportData.teacher || {};
-            const juryMembers = currentReportData.juryGroup && Array.isArray(currentReportData.juryGroup.members) ? currentReportData.juryGroup.members : [];
+            const juryGroup = currentReportData.juryGroup || currentReportData.jury_group || {
+                members: []
+            };
+            const juryMembers = Array.isArray(juryGroup.members) ? juryGroup.members : [];
 
             supervisor.textContent = reportTeacher.name || 'Non affecté';
             form.action = `{{ url('/reports') }}/${currentReportData.id}/assign-jury`;

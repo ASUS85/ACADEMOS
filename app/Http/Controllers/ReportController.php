@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Report;
 use App\Models\ReportJuryEvaluation;
 use App\Models\ReportVersion;
+use App\Notifications\ReportWorkflowNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -36,6 +37,28 @@ class ReportController extends Controller
         }
 
         abort(403);
+    }
+
+    private function notifyUsers(iterable $users, string $title, string $message, ?string $url = null, array $meta = []): void
+    {
+        collect($users)
+            ->filter(fn ($user) => $user instanceof User)
+            ->unique('id')
+            ->each(function (User $user) use ($title, $message, $url, $meta) {
+                $targetUrl = $url ?? ($user->hasRole('student') ? route('student.reports.index') : route('reports.index'));
+                $user->notify(new ReportWorkflowNotification($title, $message, $targetUrl, $meta));
+            });
+    }
+
+    private function adminRecipients(?int $departmentId = null)
+    {
+        $admins = User::role('admin')
+            ->when($departmentId, fn ($query) => $query->where('department_id', $departmentId))
+            ->get();
+
+        $superadmins = User::role('superadmin')->get();
+
+        return $admins->concat($superadmins)->unique('id')->values();
     }
 
     /**
@@ -103,6 +126,14 @@ class ReportController extends Controller
                 'action' => 'soumis',
             ]);
 
+            $this->notifyUsers(
+                $this->adminRecipients(Auth::user()->department_id),
+                'Nouveau rapport soumis',
+                Auth::user()->name . ' a soumis son premier rapport : ' . $report->title . '.',
+                route('reports.index'),
+                ['report_id' => $report->id, 'event' => 'report.submitted']
+            );
+
             return redirect('/dashboard')->with('success', '✅ Rapport soumis !');
         }
 
@@ -125,6 +156,16 @@ class ReportController extends Controller
             'status' => Report::STATUS_SUBMITTED,
         ]);
 
+        if ($report->teacher) {
+            $this->notifyUsers(
+                [$report->teacher],
+                'Rapport resoumis',
+                Auth::user()->name . ' a resoumis le rapport : ' . $report->title . '.',
+                route('reports.index'),
+                ['report_id' => $report->id, 'event' => 'report.resubmitted']
+            );
+        }
+
         return redirect('/dashboard')->with('success', '✅ Rapport soumis !');
     }
 
@@ -136,10 +177,24 @@ class ReportController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $latestReport = $user->reports()
-            ->with(['versions', 'latestVersion', 'teacher', 'juryGroup.members'])
+        $reports = $user->reports()
+            ->with(['versions.user', 'teacher', 'juryGroup.members'])
             ->latest()
-            ->first();
+            ->get();
+
+        $latestReport = $reports->first();
+
+        return view('student.dashboard', compact('reports', 'latestReport'));
+    }
+
+    public function studentHistoryIndex()
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasRole('student')) {
+            abort(403);
+        }
 
         $historyVersions = ReportVersion::with(['report.student.filiere', 'report.teacher', 'report.latestVersion', 'report.juryGroup.members'])
             ->whereHas('report', function ($query) use ($user) {
@@ -149,7 +204,7 @@ class ReportController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('student.dashboard', compact('historyVersions', 'latestReport'));
+        return view('student.history.index', compact('historyVersions'));
     }
 
     public function studentReportsIndex()
@@ -342,6 +397,14 @@ class ReportController extends Controller
 
             $report->update($updateData);
 
+            $this->notifyUsers(
+                array_filter([$report->student, ...$this->adminRecipients($report->student?->department_id)->all()]),
+                'Rapport validé par l’enseignant',
+                $user->name . ' a validé le rapport : ' . $report->title . '.',
+                route('reports.index'),
+                ['report_id' => $report->id, 'event' => 'teacher.validated']
+            );
+
             return back()->with('success', '✅ Rapport validé avec succès');
         }
 
@@ -350,12 +413,28 @@ class ReportController extends Controller
 
             $report->update($updateData);
 
+            $this->notifyUsers(
+                array_filter([$report->student, ...$this->adminRecipients($report->student?->department_id)->all()]),
+                'Rapport rejeté par l’enseignant',
+                $user->name . ' a rejeté le rapport : ' . $report->title . '.',
+                route('reports.index'),
+                ['report_id' => $report->id, 'event' => 'teacher.rejected']
+            );
+
             return back()->with('success', '✅ Rapport rejeté avec commentaire');
         }
 
         $updateData['status'] = Report::STATUS_COMMENTED;
 
         $report->update($updateData);
+
+        $this->notifyUsers(
+            [$report->student],
+            'Nouveau commentaire de l’enseignant',
+            $user->name . ' a ajouté une appréciation sur votre rapport : ' . $report->title . '.',
+            route('student.reports.index'),
+            ['report_id' => $report->id, 'event' => 'teacher.commented']
+        );
 
         return back()->with('success', '✅ Commentaire enregistré avec succès');
     }
@@ -385,6 +464,14 @@ class ReportController extends Controller
             'teacher_id' => $teacher->id,
             'status' => 'Affecté'
         ]);
+
+        $this->notifyUsers(
+            [$teacher],
+            'Rapport affecté',
+            'Le rapport "' . $report->title . '" vous a été affecté.',
+            route('reports.index'),
+            ['report_id' => $report->id, 'event' => 'teacher.assigned']
+        );
 
         return response()->json([
             'success' => true,
@@ -508,6 +595,16 @@ class ReportController extends Controller
             }
         }
 
+        $jury->load('members');
+
+        $this->notifyUsers(
+            $jury->members->all(),
+            'Jury affecté',
+            'Vous avez été affecté au jury du rapport : ' . $report->title . '.',
+            route('reports.index'),
+            ['report_id' => $report->id, 'event' => 'jury.assigned']
+        );
+
         // 5) Mettre à jour le statut du rapport
         $report->update([
             'status'  => Report::STATUS_JURY_PENDING,
@@ -606,6 +703,14 @@ class ReportController extends Controller
             ]
         );
 
+        $this->notifyUsers(
+            $this->adminRecipients($report->student?->department_id),
+            'Nouvelle note de jury',
+            $user->name . ' a noté le rapport : ' . $report->title . '.',
+            route('reports.index'),
+            ['report_id' => $report->id, 'event' => 'jury.scored']
+        );
+
         $summary = $this->refreshJuryFinalState($report);
 
         $message = $summary['completed']
@@ -661,14 +766,7 @@ class ReportController extends Controller
                 default => 'Rejeté',
             };
 
-        $appreciation = match (true) {
-            $averageFinal >= 18 => 'Très Honorable',
-            $averageFinal >= 16 => 'Très Bien',
-            $averageFinal >= 14 => 'Bien',
-            $averageFinal >= 12 => 'Assez Bien',
-            $averageFinal >= 10 => 'Passable',
-            default => 'Échec',
-        };
+        $wasAlreadyFinal = $report->status === Report::STATUS_FINAL && $report->jury_final_score !== null;
 
         $report->update([
             'jury_technical_note' => $averageTechnical,
@@ -677,9 +775,25 @@ class ReportController extends Controller
             'jury_final_score' => $averageFinal,
             'jury_decision' => $finalDecision,
             'jury_comment' => "Évaluation collégiale enregistrée par {$submittedEvaluations}/{$totalMembers} membre(s) du jury.",
-            'jury_appreciation' => $appreciation,
             'status' => $finalDecision === 'Validé' ? Report::STATUS_FINAL : $finalDecision,
         ]);
+
+        if (!$wasAlreadyFinal) {
+            $recipients = collect([$report->student, $report->teacher])
+                ->merge($report->juryGroup?->members ?? collect())
+                ->merge($this->adminRecipients($report->student?->department_id))
+                ->filter(fn ($user) => $user instanceof User)
+                ->unique('id')
+                ->values();
+
+            $this->notifyUsers(
+                $recipients,
+                'Note finale calculée',
+                'La note finale du rapport "' . $report->title . '" a été calculée.',
+                route('reports.index'),
+                ['report_id' => $report->id, 'event' => 'jury.finalized', 'final_score' => $averageFinal]
+            );
+        }
 
         return [
             'completed' => true,
@@ -874,7 +988,7 @@ class ReportController extends Controller
             return;
         }
 
-        if ($user->hasRole('jury') && $report->juryGroup?->members?->contains('id', $user->id)) {
+        if ($report->juryGroup?->members?->contains('id', $user->id)) {
             return;
         }
 

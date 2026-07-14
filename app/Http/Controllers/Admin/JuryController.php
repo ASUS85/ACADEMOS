@@ -18,7 +18,8 @@ class JuryController extends Controller
         $user = Auth::user();
 
         $query = Jury::with(['report.student.filiere', 'members'])
-            ->where('department_id', $user->department_id);
+                ->where('department_id', $user->department_id)
+                ->whereHas('report.student');
 
         if ($request->filiere) {
             $query->whereHas('report.student', function ($q) use ($request) {
@@ -32,9 +33,9 @@ class JuryController extends Controller
             });
         }
 
-        $juries = $query->latest()->paginate(10);
+        $juryItems = $query->latest()->paginate(10);
 
-        return view('admin.admins.listJuries', compact('juries'));
+        return view('admin.admins.listJuries', compact('juryItems'));
     }
 
 

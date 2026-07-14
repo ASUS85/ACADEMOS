@@ -227,9 +227,8 @@
         ],
         'student' => [
         ['route' => 'dashboard', 'icon' => 'fa-house', 'label' => 'Dashboard', 'active' => ['dashboard']],
-       /*  ['route' => 'student.reports.create', 'icon' => 'fa-file-arrow-up', 'label' => 'Soumettre', 'active' => ['student.reports.create']], */
         ['route' => 'reports.index', 'icon' => 'fa-file', 'label' => 'Rapports', 'active' => ['reports.*', 'student.reports.*']],
-        ['route' => 'student.dashboard', 'icon' => 'fa-clock-rotate-left', 'label' => 'Historique', 'active' => ['student.dashboard']],
+        ['route' => 'student.history.index', 'icon' => 'fa-clock-rotate-left', 'label' => 'Historique', 'active' => ['student.history.*']],
         ['route' => 'student.profile.student', 'icon' => 'fa-user', 'label' => 'Profil', 'active' => ['student.profile.*']],
         ],
         'jury' => [

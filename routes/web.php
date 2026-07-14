@@ -130,8 +130,10 @@ Route::middleware('auth')->group(function () {
     // ÉTUDIANT
     Route::prefix('student')->name('student.')->group(function () {
         Route::get('/reports/create', [ReportController::class, 'create'])->name('reports.create');
+        Route::get('/reports', [ReportController::class, 'studentReportsIndex'])->name('reports.index');
         Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
         Route::get('/dashboard', [ReportController::class, 'studentDashboard'])->name('dashboard');
+        Route::get('/history', [ReportController::class, 'studentHistoryIndex'])->name('history.index');
         Route::post('/reports/{report}/resubmit', [ReportController::class, 'resubmit'])->name('resubmit');
         Route::patch('/update', [ProfileController::class, 'updateUser'])->name('student.update');
         Route::get('/profile', [ProfileController::class, 'studentProfile'])->name('profile.student');
@@ -225,6 +227,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/report-versions/{version}/preview', [ReportController::class, 'previewVersion'])->name('report-versions.preview');
     Route::get('/report-versions/{version}/download', [ReportController::class, 'downloadVersion'])->name('report-versions.download');
     Route::delete('/report-versions/{version}', [ReportController::class, 'destroyVersion'])->name('report-versions.destroy');
+    Route::post('/notifications/{notification}/read', function (Request $request, string $notificationId) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        $notification = $user->notifications()->whereKey($notificationId)->firstOrFail();
+        $notification->markAsRead();
+
+        return back();
+    })->name('notifications.read');
     Route::post('/reports/{report}/assign', [ReportController::class, 'assign'])->name('reports.assign');
     Route::post('/reports/{report}/teacher-comment', [ReportController::class, 'teacherComment'])->name('reports.teacher-comment');
     Route::post('/reports/{report}/assign-jury', [ReportController::class, 'assignJury'])->name('reports.assign-jury');

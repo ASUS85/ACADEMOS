@@ -4,6 +4,7 @@
         $currentUser = auth()->user();
         $hasNotificationsTable = \Illuminate\Support\Facades\Schema::hasTable('notifications');
         $unreadCount = $currentUser && $hasNotificationsTable && method_exists($currentUser, 'unreadNotifications') ? $currentUser->unreadNotifications->count() : 0;
+        $recentNotifications = $currentUser && $hasNotificationsTable && method_exists($currentUser, 'unreadNotifications') ? $currentUser->unreadNotifications->take(5) : collect();
         $profileRoute = $currentUser?->hasRole('admin') || $currentUser?->hasRole('superadmin')
         ? route('admin.profile.admin')
         : ($currentUser?->hasRole('teacher')
@@ -55,6 +56,37 @@
                                 <div class="fw-bold">Notifications</div>
                                 <small class="text-muted">{{ $unreadCount > 0 ? $unreadCount.' notification(s) non lue(s)' : 'Aucune notification non lue' }}</small>
                             </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            @forelse($recentNotifications as $notification)
+                            <li>
+                                <div class="dropdown-item rounded-3 py-2">
+                                    <div class="d-flex align-items-start gap-2">
+                                        <a href="{{ $notification->data['url'] ?? route('dashboard') }}" class="flex-grow-1 text-decoration-none text-dark">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <i class="fa fa-bell text-primary mt-1"></i>
+                                                <div>
+                                                    <div class="fw-semibold">{{ $notification->data['title'] ?? 'Notification' }}</div>
+                                                    <small class="text-muted d-block">{{ $notification->data['message'] ?? '' }}</small>
+                                                    <small class="text-muted">{{ optional($notification->created_at)->diffForHumans() }}</small>
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <form method="POST" action="{{ route('notifications.read', $notification->id) }}" class="ms-2 flex-shrink-0">
+                                            @csrf
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm py-0 px-2 rounded-pill" title="Marquer comme lu">
+                                                Lu
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </li>
+                            @empty
+                            <li>
+                                <span class="dropdown-item-text text-muted small px-3 py-2">Aucune notification non lue</span>
+                            </li>
+                            @endforelse
                             <li>
                                 <hr class="dropdown-divider">
                             </li>

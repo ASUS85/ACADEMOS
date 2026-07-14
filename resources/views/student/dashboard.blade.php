@@ -1,198 +1,195 @@
 <x-app-layout>
     @php
-    $workflowLabels = [
-    'Soumis' => ['label' => 'Soumis', 'color' => 'secondary'],
-    'Affecté' => ['label' => 'Affecté', 'color' => 'info'],
-    'commenté' => ['label' => 'En correction', 'color' => 'warning'],
-    'Validé' => ['label' => 'Validé', 'color' => 'success'],
-    'En attente jury' => ['label' => 'En attente jury', 'color' => 'primary'],
-    'Validé final' => ['label' => 'Validé final', 'color' => 'success'],
-    'Rejeté' => ['label' => 'Rejeté', 'color' => 'danger'],
-    ];
+    $currentUser = auth()->user();
     @endphp
 
-    <div class="container-fluid py-4">
-        <div class="row align-items-center mb-4 g-3">
-            <div class="col-lg-8">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-4 bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width: 64px; height: 64px;">
-                        <i class="fas fa-clock-rotate-left fa-2x"></i>
-                    </div>
-                    <div>
-                        <h1 class="h3 fw-bold mb-1">Historique des versions</h1>
-                        <p class="text-muted mb-0">Toutes vos soumissions apparaissent ici. Seule la dernière version reste active côté enseignants.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 text-lg-end">
-                <a href="{{ route('student.reports.create') }}" class="btn btn-primary px-4 py-3 shadow-sm me-2" data-loader-target="#globalLoader">
-                    <i class="fas fa-upload me-2"></i>Nouvelle soumission
-                </a>
-                <a href="{{ route('student.dashboard') }}" class="btn btn-outline-secondary px-4 py-3" data-loader-target="#globalLoader">
-                    <i class="fas fa-rotate me-2"></i>Actualiser
-                </a>
-            </div>
-        </div>
+    <style>
+        .status-icon {
+            width: 40px;
+            height: 40px;
+            background: #19a55a;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-        @if (session('success'))
-        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4">
-            <i class="fas fa-circle-check me-2"></i>{{ session('success') }}
-        </div>
-        @endif
+        .drop-zone {
+            border: 2px dashed #2b7ca3;
+            border-radius: 10px;
+            transition: 0.3s;
+            cursor: pointer;
+        }
 
-        @if ($latestReport)
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between gap-3">
+        .drop-zone:hover {
+            background: #f1f7fb;
+        }
+
+        .bg-wait {
+            background: #ecd3ad;
+            color: #856404;
+        }
+
+        .welcome-gradient {
+            background: linear-gradient(to left, #1083ee, #0660d4);
+            color: white;
+        }
+
+    </style>
+
+    <div class="container-fluid p-4">
+        <div class="mb-4 welcome-gradient p-4 rounded-3 shadow-sm">
+            <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <div class="text-muted small mb-1">Rapport actif</div>
-                    <h2 class="h5 fw-bold mb-2">{{ $latestReport->title }}</h2>
-                    <div class="text-muted small">Statut: {{ $latestReport->status }} • Encadreur: {{ $latestReport->teacher?->name ?? 'En attente' }}</div>
+                    @php
+                    $heure = date('H');
+                    $salutation = $heure >= 6 && $heure < 18 ? 'Bonjour' : 'Bonsoir' ; @endphp <h2 class="h5 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; color: white !important;">
+                        {{ $salutation }}, <span class="fw-normal">{{ $currentUser->name }}</span> !
+                        </h2>
+                        <p class="mb-0 opacity-75 small">
+                            Ravi de vous revoir sur <strong>Academo</strong>. Voici l'état d'avancement de vos rapports.
+                        </p>
                 </div>
-                <div class="text-md-end">
-                    <div class="badge bg-light text-dark px-3 py-2 mb-2">{{ $latestReport->versions->count() }} version(s)</div>
-                    <div class="text-muted small">Dernière mise à jour {{ $latestReport->updated_at->diffForHumans() }}</div>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        @if ($historyVersions->count() === 0)
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                <h3 class="h5 fw-bold mb-2">Aucune version soumise</h3>
-                <p class="text-muted mb-4">Déposez votre premier rapport pour remplir l’historique.</p>
-                <a href="{{ route('student.reports.create') }}" class="btn btn-primary px-4" data-loader-target="#globalLoader">Soumettre maintenant</a>
-            </div>
-        </div>
-        @else
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Rapport</th>
-                            <th>Version</th>
-                            <th>Statut</th>
-                            <th>Déposé le</th>
-                            <th class="text-end" style="width: 220px;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($historyVersions as $version)
-                        @php
-                        $report = $version->report;
-                        $workflow = $workflowLabels[$report->status] ?? ['label' => $report->status, 'color' => 'secondary'];
-                        $isLatestVersion = optional($report->latestVersion)->id === $version->id;
-                        $isLocked = $report->teacher_id || ($report->juryGroup?->members?->count() ?? 0) > 0 || in_array($report->status, ['Affecté', 'commenté', 'Validé', 'En attente jury', 'Validé final', 'Rejeté'], true);
-                        $canDelete = !$isLatestVersion || !$isLocked;
-                        $previewUrl = route('report-versions.preview', $version);
-                        $downloadUrl = route('report-versions.download', $version);
-                        @endphp
-                        <tr>
-                            <td>
-                                <div class="fw-semibold">{{ $report->title }}</div>
-                                <div class="text-muted small">Encadreur: {{ $report->teacher?->name ?? 'En attente' }}</div>
-                            </td>
-                            <td>
-                                <span class="badge bg-primary-subtle text-primary px-3 py-2">{{ $version->version }}</span>
-                                @if ($isLatestVersion)
-                                <span class="badge bg-success-subtle text-success ms-2 px-3 py-2">Active</span>
-                                @endif
-                            </td>
-                            <td>
-                                <span class="badge bg-{{ $workflow['color'] }}-subtle text-{{ $workflow['color'] }} px-3 py-2">{{ $workflow['label'] }}</span>
-                            </td>
-                            <td>
-                                <div class="fw-semibold">{{ $version->created_at->format('d/m/Y') }}</div>
-                                <div class="text-muted small">{{ $version->created_at->diffForHumans() }}</div>
-                            </td>
-                            <td class="text-end">
-                                <div class="d-inline-flex gap-2">
-                                    <button type="button" class="btn btn-outline-primary btn-sm px-3" data-preview-url="{{ $previewUrl }}" data-download-url="{{ $downloadUrl }}" data-preview-title="{{ $report->title }} - {{ $version->version }}" onclick="openVersionPreview(this)">
-                                        <i class="fas fa-eye me-1"></i>Voir
-                                    </button>
-                                    <a href="{{ $downloadUrl }}" target="_blank" class="btn btn-outline-secondary btn-sm px-3">
-                                        <i class="fas fa-download me-1"></i>Télécharger
-                                    </a>
-                                    @if ($canDelete)
-                                    <button type="button" class="btn btn-outline-danger btn-sm px-3" data-confirm-title="Suppression de la version" data-confirm-message="Confirmez-vous la suppression de cette version ?" data-confirm-submit-label="Oui, supprimer" data-confirm-form-id="deleteVersionForm{{ $version->id }}">
-                                        <i class="fas fa-trash me-1"></i>Suppr.
-                                    </button>
-                                    @else
-                                    <button type="button" class="btn btn-outline-danger btn-sm px-3" disabled title="Cette version est en prise en charge">
-                                        <i class="fas fa-trash me-1"></i>Protégé
-                                    </button>
-                                    @endif
-                                </div>
-
-                                @if ($canDelete)
-                                <form id="deleteVersionForm{{ $version->id }}" method="POST" action="{{ route('report-versions.destroy', $version) }}" class="d-none">
-                                    @csrf
-                                    @method('DELETE')
-                                </form>
-                                @endif
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
             </div>
         </div>
 
-        <div class="mt-4">
-            {{ $historyVersions->links('pagination::bootstrap-5') }}
-        </div>
-        @endif
-    </div>
-
-    <div class="modal fade" id="versionPreviewModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                <div class="modal-header bg-dark text-white border-0">
-                    <div>
-                        <h5 class="modal-title mb-0" id="versionPreviewTitle">Prévisualisation</h5>
-                        <small class="text-white-50">Aperçu direct de la version sélectionnée</small>
+        <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center p-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="status-icon shadow-sm">
+                        <i class="fa fa-check"></i>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    <div>
+                        <strong class="d-block">Statut :
+                            @if ($latestReport)
+                            {{ $latestReport->status }}
+                            @else
+                            Aucun rapport soumis
+                            @endif
+                        </strong>
+                        <span class="badge rounded-pill bg-warning text-dark px-3 mt-1">
+                            {{ $latestReport?->teacher?->name ?? 'En attente d\'encadreur' }}
+                        </span>
+                    </div>
                 </div>
-                <div class="modal-body p-0">
-                    <iframe id="versionPreviewFrame" src="" style="width: 100%; height: 75vh; border: 0;"></iframe>
+
+                @if ($latestReport && $latestReport->teacher_comment)
+                <button class="btn btn-outline-secondary mt-3 mt-md-0 rounded-3 px-4" data-bs-toggle="collapse" data-bs-target="#collapseComment">
+                    <i class="fa fa-comment me-2"></i> Voir les commentaires
+                </button>
+                @endif
+            </div>
+        </div>
+
+        @if ($latestReport && $latestReport->teacher_comment)
+        <div class="collapse mb-4" id="collapseComment">
+            <div class="alert alert-info border-0 shadow-sm mb-0">
+                <strong>Dernier commentaire de l'encadreur :</strong><br>
+                "{{ $latestReport->teacher_comment }}"
+            </div>
+        </div>
+        @endif
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-body p-4">
+                        <h3 class="h6 fw-bold m-2 p-3 shadow-sm rounded-3">Soumettre mon rapport</h3>
+
+                        <form id="submitStudentReportForm" action="{{ route('student.reports.store') }}" method="POST" enctype="multipart/form-data" data-loader-target="#globalLoader">
+                            @csrf
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Titre du rapport</label>
+                                <input type="text" name="title" class="form-control" placeholder="Ex: Rapport de stage - Fin d'étude" required>
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-center drop-zone p-5 text-center mb-3" id="dropZone" style="height: 300px;">
+                                <p class="text-muted mb-0" id="fileNameDisplay">
+                                    <i class="fa fa-file-arrow-up fa-2x text-primary mb-2"></i>
+                                    Glisser un fichier ou cliquer pour sélectionner
+                                </p>
+                                <input type="file" name="file" id="fileInput" hidden accept=".pdf,.doc,.docx">
+                            </div>
+
+                            <button type="button" class="btn btn-primary w-100 py-2 fw-bold" data-confirm-title="Soumission du rapport" data-confirm-message="Confirmez-vous l'ajout de ce rapport ?" data-confirm-submit-label="Oui, soumettre" data-confirm-form-id="submitStudentReportForm" style="background: #1e7ca6;">
+                                SOUMETTRE MON RAPPORT
+                            </button>
+                        </form>
+                    </div>
                 </div>
-                <div class="modal-footer bg-light border-0">
-                    <a id="versionPreviewDownload" href="#" target="_blank" class="btn btn-primary">
-                        <i class="fas fa-download me-2"></i>Télécharger
-                    </a>
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-body py-4 px-0">
+                        <h3 class="h6 fw-bold m-2 p-3 shadow-sm rounded-3">Rapports récents</h3>
+
+                        @forelse($reports->take(3) as $report)
+                        <div class="d-flex align-items-center justify-content-between p-3 mb-3 m-4 rounded-3 shadow" style="background: #f7f9fb;">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="fa fa-file text-primary fs-4"></i>
+                                <div>
+                                    <span class="d-block fw-bold small text-truncate" style="max-width: 150px;">{{ $report->title }}</span>
+                                    <small class="text-muted">Déposé le {{ $report->created_at->format('d M Y') }}</small>
+                                </div>
+                            </div>
+
+                            @php
+                            $btnClass = match ($report->status) {
+                            'Validé final' => 'btn-success',
+                            'À corriger' => 'btn-danger',
+                            'En attente' => 'bg-wait',
+                            default => 'btn-primary',
+                            };
+                            @endphp
+                            <span class="badge {{ str_contains($btnClass, 'bg') ? $btnClass : 'btn ' . $btnClass }} px-3 py-2 small">
+                                {{ $report->status }}
+                            </span>
+                        </div>
+                        @empty
+                        <div class="text-center py-5">
+                            <div class="mb-4">
+                                <svg width="180" height="180" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="100" cy="100" r="90" fill="#f1f7fb" />
+                                    <path d="M70 60H130V140H70V60Z" fill="white" stroke="#1e7ca6" stroke-width="2" stroke-linejoin="round" />
+                                    <path d="M80 80H120" stroke="#cbd5e0" stroke-width="2" stroke-linecap="round" />
+                                    <path d="M80 100H120" stroke="#cbd5e0" stroke-width="2" stroke-linecap="round" />
+                                    <path d="M80 120H100" stroke="#cbd5e0" stroke-width="2" stroke-linecap="round" />
+                                    <circle cx="140" cy="140" r="30" fill="#1e7ca6" />
+                                    <path d="M132 140H148M140 132V148" stroke="white" stroke-width="3" stroke-linecap="round" />
+                                </svg>
+                            </div>
+                            <h5 class="fw-bold text-dark">Prêt à commencer ?</h5>
+                            <p class="text-muted px-4">
+                                Vous n'avez pas encore soumis de rapport. Utilisez le formulaire à gauche pour envoyer votre première version à votre encadreur.
+                            </p>
+                            <i class="fa fa-arrow-left text-primary d-none d-lg-inline animate-bounce"></i>
+                        </div>
+                        @endforelse
+
+                        @if ($reports->count() > 3)
+                        <div class="text-center mt-3">
+                            <a href="{{ route('student.history.index') }}" class="btn btn-link text-decoration-none fw-bold" style="color: #1e7ca6;">VOIR L'HISTORIQUE</a>
+                        </div>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        function openVersionPreview(button) {
-            const url = button.getAttribute('data-preview-url');
-            const title = button.getAttribute('data-preview-title') || 'Prévisualisation';
-            const downloadUrl = button.getAttribute('data-download-url') || url;
-            const modalEl = document.getElementById('versionPreviewModal');
-            const frame = document.getElementById('versionPreviewFrame');
-            const download = document.getElementById('versionPreviewDownload');
-            const modalTitle = document.getElementById('versionPreviewTitle');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
 
-            if (!url || !frame || !download || !modalTitle) {
-                return;
-            }
-
-            modalTitle.textContent = title;
-            frame.src = url;
-            download.href = downloadUrl;
-
-            bootstrap.Modal.getOrCreateInstance(modalEl).show();
-
-            modalEl.addEventListener('hidden.bs.modal', () => {
-                frame.src = '';
-            }, {
-                once: true
+        if (dropZone && fileInput && fileNameDisplay) {
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    fileNameDisplay.innerHTML = `<strong>Fichier sélectionné :</strong> ${e.target.files[0].name}`;
+                }
             });
         }
 
