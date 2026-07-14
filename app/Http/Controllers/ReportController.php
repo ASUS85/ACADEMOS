@@ -103,11 +103,13 @@ class ReportController extends Controller
         $cleanTitle = $this->cleanFileName($request->title);
         $studentNameClean = $this->cleanFileName(Auth::user()->name);
 
-        $report = Report::where('student_id', Auth::id())
+        $activeReport = Report::where('student_id', Auth::id())
             ->latest('created_at')
             ->first();
 
-        if (!$report) {
+        $shouldStartNewCycle = !$activeReport || $activeReport->status === Report::STATUS_FINAL;
+
+        if ($shouldStartNewCycle) {
             $fileName = "{$cleanTitle}-{$studentNameClean}-" . now()->format('Y-m-d') . ".{$extension}";
             $filePath = $request->file('file')->storeAs('reports', $fileName, 'public');
 
@@ -137,6 +139,8 @@ class ReportController extends Controller
             return redirect('/dashboard')->with('success', '✅ Rapport soumis !');
         }
 
+        $report = $activeReport;
+
         $versionNumber = $report->versions()->count() + 1;
         $version = 'v' . $versionNumber;
         $fileName = "rapport-{$report->id}-{$version}-" . now()->format('Ymd') . '.' . $extension;
@@ -153,7 +157,7 @@ class ReportController extends Controller
         $report->update([
             'title' => $request->title ?: $report->title,
             'file_path' => $filePath,
-            'status' => Report::STATUS_SUBMITTED,
+            'status' => $report->teacher_id ? Report::STATUS_ASSIGNED : Report::STATUS_SUBMITTED,
         ]);
 
         if ($report->teacher) {
