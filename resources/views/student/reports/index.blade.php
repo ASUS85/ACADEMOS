@@ -218,6 +218,7 @@
                                 <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
                                     <span id="studentReportDetailsStatus" class="jury-teacher-badge jury-teacher-badge-muted">Statut</span>
                                     <span id="studentReportDetailsVersion" class="jury-teacher-badge jury-teacher-badge-primary">v1</span>
+                                    <span id="studentReportDetailsFinalScore" class="jury-teacher-badge jury-teacher-badge-success d-none">Note finale: --/20</span>
                                 </div>
                                 <h5 class="fw-bold mb-2" id="studentReportDetailsTitleText">Rapport</h5>
                                 <div class="text-muted small" id="studentReportDetailsMeta">Chargement...</div>
@@ -250,6 +251,9 @@
 
                                 <div class="small text-muted mb-2">Commentaire enseignant</div>
                                 <div class="fw-semibold mb-3" id="studentReportDetailsTeacherComment">-</div>
+
+                                <div class="small text-muted mb-2">Note finale</div>
+                                <div class="fw-semibold mb-0" id="studentReportDetailsFinalScoreInfo">En attente</div>
                             </div>
                         </div>
                     </div>
@@ -280,10 +284,21 @@
             const previewUrl = button.dataset.previewUrl;
             const downloadUrl = button.dataset.downloadUrl;
             const canPreview = button.dataset.canPreview === '1';
+            const versions = Array.isArray(report.versions) ? report.versions : [];
             const latestVersionValue = report.latest_version && report.latest_version.version ? report.latest_version.version : '';
             const fallbackLatestVersionValue = report.latestVersion && report.latestVersion.version ? report.latestVersion.version : '';
-            const latestVersion = latestVersionValue || fallbackLatestVersionValue || 'v1';
+            const rawLatestVersion = latestVersionValue || fallbackLatestVersionValue;
+            const parsedLatestVersion = rawLatestVersion ? parseInt(String(rawLatestVersion).replace(/[^0-9]/g, ''), 10) : NaN;
+            const computedVersionNumber = versions.length > 0 ?
+                versions.length :
+                (!Number.isNaN(parsedLatestVersion) && parsedLatestVersion > 0 ? parsedLatestVersion : 1);
+            const latestVersion = `v${computedVersionNumber}`;
             const status = report.status || 'Statut';
+            const finalScoreRaw = report.jury_final_score;
+            const finalScoreNumber = finalScoreRaw !== null && finalScoreRaw !== undefined && finalScoreRaw !== '' ?
+                Number(finalScoreRaw) :
+                NaN;
+            const hasFinalScore = !Number.isNaN(finalScoreNumber);
 
             document.getElementById('studentReportDetailsTitle').textContent = title;
             document.getElementById('studentReportDetailsTitleText').textContent = title;
@@ -293,6 +308,17 @@
             document.getElementById('studentReportDetailsStatus').textContent = status;
             document.getElementById('studentReportDetailsVersion').textContent = latestVersion;
             document.getElementById('studentReportDetailsDownload').href = downloadUrl;
+
+            const finalScoreElement = document.getElementById('studentReportDetailsFinalScore');
+            if (hasFinalScore) {
+                finalScoreElement.textContent = `Note finale: ${finalScoreNumber.toFixed(2)}/20`;
+                finalScoreElement.classList.remove('d-none');
+                document.getElementById('studentReportDetailsFinalScoreInfo').textContent = `${finalScoreNumber.toFixed(2)}/20`;
+            } else {
+                finalScoreElement.textContent = 'Note finale: En attente';
+                finalScoreElement.classList.add('d-none');
+                document.getElementById('studentReportDetailsFinalScoreInfo').textContent = 'En attente';
+            }
 
             const previewFrame = document.getElementById('studentReportDetailsPreview');
             const previewFallback = document.getElementById('studentReportDetailsPreviewFallback');
