@@ -94,6 +94,16 @@
             /* Petit effet de glissement au survol */
         }
 
+        .sidebar a.is-active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.16);
+            border-right: 3px solid rgba(255, 255, 255, 0.9);
+        }
+
+        .sidebar a.is-active i {
+            color: #fff;
+        }
+
         .sidebar a i {
             font-size: 18px;
             min-width: 40px;
@@ -151,130 +161,118 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
+        #globalLoader {
+            display: none;
+        }
+
+        #globalLoader.is-active {
+            display: block;
+        }
+
+        .loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(14, 20, 35, 0.42);
+            backdrop-filter: blur(2px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loader-box {
+            width: 84px;
+            height: 84px;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loader-spinner {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-width: 0.28rem;
+        }
+
     </style>
 </head>
 
 <body>
-    <!-- TOPBAR -->
-    {{-- <nav class="navbar navbar-dark bg-light px-4">
-    {{-- <nav class="navbar navbar-dark bg-light px-4">
-        <img src="{{ asset('images/logo1.png') }}"
-    alt="Logo Academos"
-    width="80"
-    class="me-2">
-    alt="Logo Academos"
-    width="80"
-    class="me-2">
-
-    <div class="text-dark">
-        <i class="fa fa-user"></i>
-        {{ Auth::user()->name ?? 'Utilisateur' }}
-    </div>
-    </nav> --}}
     @include('layouts.navigation')
 
     <!-- SIDEBAR -->
 
     <div class="sidebar" id="sidebar">
+        @php
+        $currentRole = Auth::user()->role_name;
+        $sidebarMenus = [
+        'admin' => [
+        ['route' => 'dashboard', 'icon' => 'fa-house', 'label' => 'Dashboard', 'active' => ['dashboard']],
+        ['route' => 'admin.users.index', 'icon' => 'fa-users', 'label' => 'Utilisateurs', 'active' => ['admin.users.*']],
+        ['route' => 'admin.students.index', 'icon' => 'fa-user-graduate', 'label' => 'Étudiants', 'active' => ['admin.students.*']],
+        ['route' => 'admin.teachers.index', 'icon' => 'fa-chalkboard-teacher', 'label' => 'Enseignants', 'active' => ['admin.teachers.*']],
+        ['route' => 'reports.index', 'icon' => 'fa-file', 'label' => 'Rapports', 'active' => ['reports.*', 'admin.reports.*', 'superadmin.reports', 'teacher.reports.*', 'jury.reports.*']],
+        ['route' => 'admin.juries.index', 'icon' => 'fa-gavel', 'label' => 'Jurys', 'active' => ['admin.juries.*']],
+        ['route' => 'admin.stats.index', 'icon' => 'fa-chart-bar', 'label' => 'Statistiques', 'active' => ['admin.stats.*']],
+        ['route' => 'admin.profile.admin', 'icon' => 'fa-user', 'label' => 'Profil', 'active' => ['admin.profile.*']],
+        ],
+        'teacher' => [
+        ['route' => 'dashboard', 'icon' => 'fa-house', 'label' => 'Dashboard', 'active' => ['dashboard']],
+        ['route' => 'reports.index', 'icon' => 'fa-file', 'label' => 'Rapports', 'active' => ['reports.*', 'teacher.reports.*']],
+        ['route' => 'teacher.jury.index', 'icon' => 'fa-gavel', 'label' => 'Jury', 'active' => ['teacher.jury.*']],
+        ['route' => 'teacher.profile', 'icon' => 'fa-user', 'label' => 'Profil', 'active' => ['teacher.profile*']],
+        ],
+        'student' => [
+        ['route' => 'dashboard', 'icon' => 'fa-house', 'label' => 'Dashboard', 'active' => ['dashboard']],
+       /*  ['route' => 'student.reports.create', 'icon' => 'fa-file-arrow-up', 'label' => 'Soumettre', 'active' => ['student.reports.create']], */
+        ['route' => 'reports.index', 'icon' => 'fa-file', 'label' => 'Rapports', 'active' => ['reports.*', 'student.reports.*']],
+        ['route' => 'student.dashboard', 'icon' => 'fa-clock-rotate-left', 'label' => 'Historique', 'active' => ['student.dashboard']],
+        ['route' => 'student.profile.student', 'icon' => 'fa-user', 'label' => 'Profil', 'active' => ['student.profile.*']],
+        ],
+        'jury' => [
+        ['route' => 'dashboard', 'icon' => 'fa-house', 'label' => 'Dashboard', 'active' => ['dashboard']],
+        ['route' => 'reports.index', 'icon' => 'fa-file', 'label' => 'Rapports', 'active' => ['reports.*', 'jury.reports.*']],
+        ['route' => 'profile.edit', 'icon' => 'fa-user', 'label' => 'Profil', 'active' => ['profile.*']],
+        ],
+        'superadmin' => [
+        ['route' => 'dashboard', 'icon' => 'fa-house', 'label' => 'Dashboard', 'active' => ['dashboard']],
+        ['route' => 'superadmin.users.index', 'icon' => 'fa-users', 'label' => 'Utilisateurs', 'active' => ['superadmin.users.*']],
+        ['route' => 'superadmin.students.index', 'icon' => 'fa-user-graduate', 'label' => 'Étudiants', 'active' => ['superadmin.students.*']],
+        ['route' => 'superadmin.teachers.index', 'icon' => 'fa-chalkboard-teacher', 'label' => 'Enseignants', 'active' => ['superadmin.teachers.*']],
+        ['route' => 'superadmin.admins.index', 'icon' => 'fa-user-shield', 'label' => 'Admins', 'active' => ['superadmin.admins.*']],
+        ['route' => 'reports.index', 'icon' => 'fa-file', 'label' => 'Rapports', 'active' => ['reports.*', 'superadmin.reports', 'admin.reports.*']],
+        ['route' => 'superadmin.stats', 'icon' => 'fa-chart-bar', 'label' => 'Statistiques', 'active' => ['superadmin.stats']],
+        ['route' => 'admin.profile.admin', 'icon' => 'fa-user', 'label' => 'Profil', 'active' => ['profile.*']],
+        ],
+        ];
+        $menuItems = $sidebarMenus[$currentRole]?? [
+        ['route' => 'dashboard', 'icon' => 'fa-house', 'label' => 'Dashboard', 'active' => ['dashboard']],
+        ];
+        @endphp
 
         <div id="toggleSidebar" class="mb-4 text-light d-flex justify-content-center align-items-center">
             <i class="bi bi-list"></i>
         </div>
 
-        <a href="{{ route('dashboard') }}"  data-loader-target="#globalLoader">
-            <i class="fa fa-house"></i>
-            <span class="menu-text">Dashboard</span>
+        @foreach ($menuItems as $item)
+        @php
+        $isActive = collect($item['active'])->contains(fn ($pattern) => request()->routeIs($pattern));
+        @endphp
+        <a href="{{ route($item['route']) }}" data-loader-target="#globalLoader" class="{{ $isActive? 'is-active' : '' }}">
+            <i class="fa {{ $item['icon'] }}"></i>
+            <span class="menu-text">{{ $item['label'] }}</span>
         </a>
+        @endforeach
 
-        @switch(Auth::user()->role_name)
-        @case('admin')
-        <a href="{{ route('admin.users.index') }}">
-            <i class="fa fa-users"></i>
-            <span class="menu-text">Utilisateurs</span>
-        </a>
-        <a href="{{ route('admin.reports.index') }}">
-            <i class="fa fa-file"></i>
-            <span class="menu-text">Rapports</span>
-        </a>
-        <a href="{{ route('admin.juries.index') }}">
-            <i class="fa fa-gavel"></i>
-            <span class="menu-text">Groupe de jury</span>
-        </a>
-        <a href="{{ route('admin.profile.admin') }}">
-            <i class="fa fa-user"></i>
-            <span class="menu-text">Profil</span>
-        </a>
-        @break
-
-        @case('teacher')
-        <a href="{{ route('teacher.reports.index') }}">
-            <i class="fa fa-file"></i>
-            <span class="menu-text">Rapports</span>
-        </a>
-        <a href="{{ route('teacher.reports.index') }}">
-            <i class="fa fa-message"></i>
-            <span class="menu-text">Commentaires</span>
-        </a>
-        <a href="{{ route('teacher.reports.index') }}">
-            <i class="fa fa-gavel"></i>
-            <span class="menu-text">Groupe de jury</span>
-        </a>
-        <a href="{{ route('teacher.profile') }}">
-            <i class="fa fa-user"></i>
-            <span class="menu-text">Profil</span>
-        </a>
-        @break
-
-        @case('student')
-        <a href="{{ route('student.dashboard') }}">
-            <i class="fa fa-file"></i>
-            <span class="menu-text">Mes Rapports</span>
-        </a>
-        <a href="{{ route('student.dashboard') }}">
-            <i class="fa fa-message"></i>
-            <span class="menu-text">Commentaires</span>
-        </a>
-        <a href="{{ route('student.dashboard') }}">
-            <i class="fa fa-history"></i>
-            <span class="menu-text">Historique</span>
-        </a>
-        <a href="{{ route('student.profile.student') }}">
-            <i class="fa fa-user"></i>
-            <span class="menu-text">Profil</span>
-        </a>
-        @break
-
-        @case('superadmin')
-        <a href="{{ route('superadmin.users.index') }}">
-            <i class="fa fa-users"></i>
-            <span class="menu-text">Utilisateurs</span>
-        </a>
-        <a href="{{ route('superadmin.reports') }}">
-            <i class="fa fa-file"></i>
-            <span class="menu-text">Rapports</span>
-        </a>
-        <a href="{{ route('superadmin.stats') }}">
-            <i class="fa fa-chart-bar"></i>
-            <span class="menu-text">Statistiques</span>
-        </a>
-        <a href="{{ route('superadmin.system') }}">
-            <i class="fa fa-gear"></i>
-            <span class="menu-text">Paramètres</span>
-        </a>
-        <a href="{{ route('profile.edit') }}">
-            <i class="fa fa-user"></i>
-            <span class="menu-text">Profil</span>
-        </a>
-        @break
-
-        @default
+        @if (empty($menuItems))
         <span class="menu-text">Aucun menu disponible</span>
-        @default
-        <span class="menu-text">Aucun menu disponible</span>
-        @endswitch
+        @endif
 
         <div class="mt-auto-custom">
-            <button type="button" class="logout-btn" data-bs-toggle="modal">
+            <button type="button" class="logout-btn" data-bs-toggle="modal" data-bs-target="#logoutModal">
                 <i class="fa fa-power-off" style="font-size: 18px; min-width: 40px;"></i>
                 <span class="menu-text">Déconnexion</span>
             </button>
@@ -290,56 +288,37 @@
                 </div>
                 <div class="modal-body text-center">
                     <i class="bi bi-exclamation-circle text-warning" style="font-size: 3rem;"></i>
-                    <p class="mt-3">Êtes-vous sûr de vouloir vous déconnecter ?</p>
+                    <p class="mt-3">Êtes-vous sûr de vouloir vous déconnecter?</p>
                 </div>
                 <div class="modal-footer justify-content-center">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
 
-                    <form method="POST" action="{{ route('logout') }}">
+                    <form method="POST" action="{{ route('logout') }}" data-loader-target="#globalLoader">
                         @csrf
-                        <button type="submit" class="btn btn-danger"  data-loader-target="#globalLoader">Oui, me déconnecter</button>
+                        <button type="submit" class="btn btn-danger">Oui, me déconnecter</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-
-
-    {{-- <div class="container-fluid min-vh-100 bg-light px-0">
-    {{-- <div class="container-fluid min-vh-100 bg-light px-0">
-        @include('layouts.navigation')
-
-        <!-- Page Heading -->
-        @isset($header)
-            <header class="bg-white shadow-sm border-bottom">
-                <div class="container py-4">
-                    <h2 class="h3 fw-bold text-primary mb-0">{{ $header }}</h2>
-    </div>
-    </header>
-    @endisset
-    </div>
-    </header>
-    @endisset
-
-    <!-- Page Content -->
-    <main class="container my-4">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                {{ $slot }}
+    <div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-labelledby="globalConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="globalConfirmModalLabel">Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" id="globalConfirmModalMessage">Voulez-vous confirmer cette action?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger" id="globalConfirmModalSubmit">Confirmer</button>
+                </div>
             </div>
         </div>
-    </main>
-    <!-- Page Content -->
-    <main class="container my-4">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                {{ $slot }}
-            </div>
-        </div>
-    </main>
-    </div> --}}
-
+    </div>
 
     <!-- Page Content -->
     <div class="content-area">
@@ -358,12 +337,183 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const sidebar = document.getElementById("sidebar");
-        const toggleBtn = document.getElementById("toggleSidebar");
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('toggleSidebar');
+        const globalLoader = document.getElementById('globalLoader');
+        const LOADER_MAX_VISIBLE_MS = 1000;
+        let globalLoaderTimer = null;
 
-        toggleBtn.addEventListener("click", () => {
-            sidebar.classList.toggle("expanded");
+        if (toggleBtn && sidebar) {
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('expanded');
+            });
+        }
+
+        const hideGlobalLoader = () => {
+            if (globalLoader) {
+                globalLoader.classList.remove('is-active');
+            }
+            if (globalLoaderTimer) {
+                clearTimeout(globalLoaderTimer);
+                globalLoaderTimer = null;
+            }
+        };
+
+        const showGlobalLoader = () => {
+            if (globalLoader) {
+                globalLoader.classList.add('is-active');
+
+                if (globalLoaderTimer) {
+                    clearTimeout(globalLoaderTimer);
+                }
+
+                globalLoaderTimer = setTimeout(() => {
+                    hideGlobalLoader();
+                }, LOADER_MAX_VISIBLE_MS);
+            }
+        };
+
+        document.querySelectorAll('[data-loader-target], [data-show-loader="true"]').forEach((el) => {
+            const isForm = el.tagName === 'FORM';
+            const eventName = isForm ? 'submit' : 'click';
+
+            el.addEventListener(eventName, () => {
+                if (el.hasAttribute('data-bs-toggle')) {
+                    return;
+                }
+                showGlobalLoader();
+            });
         });
+
+        document.querySelectorAll('.sidebar a, .pagination a').forEach((link) => {
+            link.addEventListener('click', (event) => {
+                if (link.hasAttribute('data-bs-toggle')) {
+                    return;
+                }
+
+                const href = link.getAttribute('href');
+                if (!href || href === '#' || href.startsWith('javascript:')) {
+                    return;
+                }
+
+                if (event.ctrlKey || event.metaKey || event.shiftKey || link.target === '_blank') {
+                    return;
+                }
+
+                showGlobalLoader();
+            });
+        });
+
+        document.querySelectorAll('form:not([data-no-loader="true"])').forEach((form) => {
+            form.addEventListener('submit', () => {
+                showGlobalLoader();
+            });
+        });
+
+        window.addEventListener('beforeunload', () => {
+            showGlobalLoader();
+        });
+
+        window.addEventListener('pageshow', () => {
+            hideGlobalLoader();
+        });
+
+        const confirmModalEl = document.getElementById('globalConfirmModal');
+        const confirmModalMessage = document.getElementById('globalConfirmModalMessage');
+        const confirmModalTitle = document.getElementById('globalConfirmModalLabel');
+        const confirmModalSubmit = document.getElementById('globalConfirmModalSubmit');
+
+        let confirmAction = null;
+        window.openGlobalConfirm = (options = {}) => {
+            if (!confirmModalEl || !confirmModalSubmit) {
+                return false;
+            }
+
+            const message = options.message || 'Voulez-vous confirmer cette action?';
+            const title = options.title || 'Confirmation';
+            const submitLabel = options.submitLabel || 'Confirmer';
+
+            confirmModalMessage.textContent = message;
+            confirmModalTitle.textContent = title;
+            confirmModalSubmit.textContent = submitLabel;
+            confirmAction = typeof options.onConfirm === 'function' ? options.onConfirm : null;
+
+            new bootstrap.Modal(confirmModalEl).show();
+            return true;
+        };
+
+        if (confirmModalEl && confirmModalSubmit) {
+            const confirmModal = new bootstrap.Modal(confirmModalEl);
+
+            document.addEventListener('click', (event) => {
+                const trigger = event.target.closest('[data-confirm-message]');
+                if (!trigger) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                const message = trigger.getAttribute('data-confirm-message') || 'Voulez-vous confirmer cette action?';
+                const title = trigger.getAttribute('data-confirm-title') || 'Confirmation';
+                const submitLabel = trigger.getAttribute('data-confirm-submit-label') || 'Confirmer';
+
+                confirmModalMessage.textContent = message;
+                confirmModalTitle.textContent = title;
+                confirmModalSubmit.textContent = submitLabel;
+
+                confirmAction = () => {
+                    const formId = trigger.getAttribute('data-confirm-form-id');
+                    const action = trigger.getAttribute('data-confirm-action');
+                    const method = (trigger.getAttribute('data-confirm-method') || 'POST').toUpperCase();
+
+                    if (formId) {
+                        const form = document.getElementById(formId);
+                        if (form) {
+                            form.submit();
+                            return;
+                        }
+                    }
+
+                    if (action) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = action;
+
+                        const tokenInput = document.createElement('input');
+                        tokenInput.type = 'hidden';
+                        tokenInput.name = '_token';
+                        tokenInput.value = document.querySelector('meta[name="csrf-token"]').content;
+                        form.appendChild(tokenInput);
+
+                        if (method !== 'POST') {
+                            const methodInput = document.createElement('input');
+                            methodInput.type = 'hidden';
+                            methodInput.name = '_method';
+                            methodInput.value = method;
+                            form.appendChild(methodInput);
+                        }
+
+                        document.body.appendChild(form);
+                        form.submit();
+                        return;
+                    }
+
+                    const href = trigger.getAttribute('href');
+                    if (href && href !== '#') {
+                        window.location.href = href;
+                    }
+                };
+
+                confirmModal.show();
+            });
+
+            confirmModalSubmit.addEventListener('click', () => {
+                showGlobalLoader();
+                if (typeof confirmAction === 'function') {
+                    confirmAction();
+                }
+            });
+        }
 
     </script>
 
@@ -377,27 +527,7 @@
             </div>
         </div>
     </div>
-    <div id="toast-success" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999;">
-        <div class="toast show border-0" style="background-color:#d1e7dd; color:#0f5132;">
-            <div class="d-flex">
-                <div class="toast-body">
-                    {{ session('success') }}
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <script>
-        setTimeout(() => {
-            let toast = document.getElementById('toast-success');
-            if (toast) {
-                toast.style.transition = "opacity 0.5s";
-                toast.style.opacity = "0";
-                setTimeout(() => toast.remove(), 500);
-            }
-        }, 3000); // ⏱️ 3 secondes
-
-    </script>
     <script>
         setTimeout(() => {
             let toast = document.getElementById('toast-success');

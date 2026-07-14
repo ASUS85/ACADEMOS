@@ -493,7 +493,9 @@
         {{-- MODAL SUPPRESSION UNIFIÉE (student / teacher) --}}
         @foreach($users as $user)
         @php
-        $route = route('admin.teachers.destroy', $user);
+        $route = $user->hasRole('teacher')
+        ? route('admin.teachers.destroy', $user)
+        : route('admin.students.destroy', $user);
         @endphp
         <div class="modal fade" id="deleteModal{{ $user->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -686,7 +688,7 @@
                             <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
                                 <i class="fas fa-times me-2"></i>Annuler
                             </button>
-                            <button type="submit" class="btn btn-primary px-4" data-loader-target="#globalLoader">
+                            <button type="button" class="btn btn-primary px-4" data-confirm-title="Création d'un enseignant" data-confirm-message="Confirmez-vous l'ajout de ce nouvel enseignant ?" data-confirm-submit-label="Oui, créer" data-confirm-form-id="createTeacherForm">
                                 <i class="fas fa-save me-2"></i>Créer l'enseignant
                             </button>
                         </div>

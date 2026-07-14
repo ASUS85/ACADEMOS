@@ -18,8 +18,7 @@
                     <div class="col-md-6 ps-md-4">
                         <h6 class="text-primary fw-bold mb-3">Dernière Version</h6>
                         <p class="small text-muted mb-3">{{ $report->title }}</p>
-                        <a href="{{ asset('storage/' . $report->file_path) }}" target="_blank"
-                            class="btn btn-primary w-100 mb-2">
+                        <a href="{{ route('reports.download', $report) }}" target="_blank" class="btn btn-primary w-100 mb-2">
                             <i class="fa fa-file-pdf me-2"></i> Télécharger le rapport
                         </a>
                     </div>
@@ -35,11 +34,10 @@
                             Commentaires & Instructions
                         </label>
 
-                        <textarea name="comment" class="form-control bg-light @error('comment') is-invalid @enderror" rows="3"
-                            placeholder="Laissez vos remarques ici..." required>{{ old('comment', $report->teacher_comment) }}</textarea>
+                        <textarea name="comment" class="form-control bg-light @error('comment') is-invalid @enderror" rows="3" placeholder="Laissez vos remarques ici..." required>{{ old('comment', $report->teacher_comment) }}</textarea>
 
                         @error('comment')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 

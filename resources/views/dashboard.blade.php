@@ -27,25 +27,20 @@
         overflow-y: auto;
         padding: 20px;
     }
+
 </style>
 
 <x-app-layout>
 
-    {{-- DASHBOARD PAR ROLE --}}
+    {{-- DASHBOARD PRINCIPAL ADMIN / SUPERADMIN --}}
     @if (auth()->user()->hasRole('admin'))
-        @include('admin.admins.acceuil')
-    @elseif(auth()->user()->hasRole('student'))
-        @include('./student/dashboard')
-    @elseif(auth()->user()->hasRole('teacher'))
-        @include('dashboard.roles.teacher')
-    @elseif(auth()->user()->hasRole('jury'))
-        @include('dashboard.roles.jury')
+    @include('admin.admins.acceuil')
     @elseif(auth()->user()->hasRole('superadmin'))
-        @include('admin.superadmin.acceuil')
+    @include('admin.superadmin.acceuil')
     @else
-        <div class="alert alert-warning">
-            Aucun rôle attribué²
-        </div>
+    <div class="alert alert-warning">
+        Tableau de bord non disponible pour ce rôle.
+    </div>
     @endif
 
     </div>

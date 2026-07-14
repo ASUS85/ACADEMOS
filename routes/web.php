@@ -2,11 +2,12 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\SuperAdmin\UserController;
-use App\Http\Controllers\Admin\JuryController;
+use App\Http\Controllers\Admin\JuryController as AdminJuryController;
 use App\Models\Filiere;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -21,7 +22,8 @@ Route::get('/filieres/{department}', function ($departmentId) {
 });
 
 Route::get('/dashboard', function (Request $request) {
-    $user = auth()->user();
+    /** @var User $user */
+    $user = Auth::user();
     $adminDepartment = $user->department_id;
 
     if ($user->hasAnyRole(['admin', 'superadmin'])) {
@@ -68,12 +70,7 @@ Route::get('/dashboard', function (Request $request) {
     }
 
     if ($user->hasRole('student')) {
-        $reports = Report::where('student_id', $user->id)
-            ->with(['versions', 'teacher'])
-            ->latest()
-            ->get();
-        $latestReport = $reports->first();
-        return view('student.dashboard', compact('reports', 'latestReport'));
+        return app(ReportController::class)->studentDashboard();
     }
 
     if ($user->hasRole('teacher')) {
@@ -109,10 +106,22 @@ Route::get('/dashboard', function (Request $request) {
         return view('teacher.dashboard', compact('assignedReports', 'stats', 'filieres'));
     }
 
+    if ($user->hasRole('jury')) {
+        $reports = $user->juryReports()
+            ->with(['student.filiere', 'teacher', 'juryGroup.members', 'juryEvaluations.user'])
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('jury.reports.index', compact('reports'));
+    }
+
     return redirect('/');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+
     // PROFIL
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -181,19 +190,16 @@ Route::middleware('auth')->group(function () {
             Route::get('/profile', [ProfileController::class, 'adminProfile'])->name('profile.admin');
             Route::prefix('juries')
                 ->name('juries.')
-                ->controller(\App\Http\Controllers\Admin\JuryController::class)
+                ->controller(AdminJuryController::class)
                 ->group(function () {
                     Route::get('/', 'index')->name('index');
                     Route::post('/', 'store')->name('store');
                     Route::put('/{jury}', 'update')->name('update');
                     Route::delete('/{jury}', 'destroy')->name('destroy');
                 });
-            Route::patch('/update', [ProfileController::class, 'updateUser'])->name('admin.update');
+            Route::patch('/update', [ProfileController::class, 'updateUser'])->name('update');
             Route::post('/reports/add-jury-member', [ReportController::class, 'addJuryMember'])->name('reports.addJuryMember');
-            Route::post('/juries/add-member', [JuryController::class, 'addJuryMember'])->name('juries.addMember');
-
-            Route::post('/reports/add-jury-member', [ReportController::class, 'addJuryMember'])->name('reports.addJuryMember');
-            Route::post('/juries/add-member', [JuryController::class, 'addJuryMember'])->name('juries.addMember');
+            Route::post('/juries/add-member', [AdminJuryController::class, 'addJuryMember'])->name('juries.addMember');
 
         });
 
@@ -205,6 +211,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/profile', [TeacherController::class, 'updateProfile'])->name('profile.update');
         Route::post('/profile/password', [TeacherController::class, 'updatePassword'])->name('profile.password');
         Route::get('/reports', [ReportController::class, 'teacherIndex'])->name('reports.index');
+        Route::get('/jury-reports', [ReportController::class, 'teacherJuryIndex'])->name('jury.index');
     });
 
     // JURY
@@ -213,10 +220,16 @@ Route::middleware('auth')->group(function () {
     });
 
     // ACTIONS RAPPORTS (communes)
+    Route::get('/reports/{report}/preview', [ReportController::class, 'preview'])->name('reports.preview');
+    Route::get('/reports/{report}/download', [ReportController::class, 'download'])->name('reports.download');
+    Route::get('/report-versions/{version}/preview', [ReportController::class, 'previewVersion'])->name('report-versions.preview');
+    Route::get('/report-versions/{version}/download', [ReportController::class, 'downloadVersion'])->name('report-versions.download');
+    Route::delete('/report-versions/{version}', [ReportController::class, 'destroyVersion'])->name('report-versions.destroy');
     Route::post('/reports/{report}/assign', [ReportController::class, 'assign'])->name('reports.assign');
     Route::post('/reports/{report}/teacher-comment', [ReportController::class, 'teacherComment'])->name('reports.teacher-comment');
     Route::post('/reports/{report}/assign-jury', [ReportController::class, 'assignJury'])->name('reports.assign-jury');
     Route::post('/reports/{report}/jury-evaluate', [ReportController::class, 'juryEvaluate'])->name('reports.jury-evaluate');
+    Route::delete('/reports/{report}', [ReportController::class, 'destroy'])->name('reports.destroy');
     Route::post('/reports/{report}/remove-teacher', [ReportController::class, 'removeTeacher']);
 
     //Action filière

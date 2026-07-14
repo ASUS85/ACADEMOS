@@ -4,16 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Jury;
 use App\Models\Report;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 class JuryController extends Controller
 {
     //
     public function index(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         $query = Jury::with(['report.student.filiere', 'members'])
             ->where('department_id', $user->department_id);
@@ -54,12 +56,12 @@ class JuryController extends Controller
         }
 
         // Créer ou récupérer le jury
+        $user = Auth::user();
         $jury = Jury::updateOrCreate(
             ['report_id' => $report->id],
-            ['department_id' => auth()->user()->department_id]
+            ['department_id' => $user->department_id]
         );
 
-<<<<<<< HEAD
         $members = collect($request->members);
         $memberIds = $members->pluck('user_id')->map(fn($id) => (int) $id);
 
@@ -77,7 +79,7 @@ class JuryController extends Controller
 
         $validTeachers = User::role('teacher')
             ->whereIn('id', $memberIds)
-            ->where('department_id', auth()->user()->department_id)
+            ->where('department_id', $user->department_id)
             ->count();
 
         if ($validTeachers !== $memberIds->count()) {
@@ -87,14 +89,6 @@ class JuryController extends Controller
         $jury->members()->detach();
 
         foreach ($members as $member) {
-=======
-        // Vider les anciens membres
-        $jury->members()->detach();
-
-        // Ajouter les nouveaux membres
-        foreach ($request->members as $member) {
-            // Vérifier encadreur
->>>>>>> d0ebb3949cb32d1a3ade5a96e35c6bd715a534b1
             if ($member['role'] === 'encadreur' && $report->teacher_id != $member['user_id']) {
                 return back()->withErrors('Encadreur invalide');
             }
@@ -118,7 +112,6 @@ class JuryController extends Controller
 
         $report = $jury->report;
 
-<<<<<<< HEAD
         $members = collect($request->members);
         $memberIds = $members->pluck('user_id')->map(fn($id) => (int) $id);
 
@@ -136,7 +129,7 @@ class JuryController extends Controller
 
         $validTeachers = User::role('teacher')
             ->whereIn('id', $memberIds)
-            ->where('department_id', auth()->user()->department_id)
+            ->where('department_id', Auth::user()->department_id)
             ->count();
 
         if ($validTeachers !== $memberIds->count()) {
@@ -144,10 +137,6 @@ class JuryController extends Controller
         }
 
         foreach ($members as $member) {
-=======
-        // Vérifier encadreur
-        foreach ($request->members as $member) {
->>>>>>> d0ebb3949cb32d1a3ade5a96e35c6bd715a534b1
             if ($member['role'] === 'encadreur' && $report->teacher_id != $member['user_id']) {
                 return back()->withErrors('Encadreur invalide');
             }
@@ -155,11 +144,7 @@ class JuryController extends Controller
 
         // Vider et recréer les membres
         $jury->members()->detach();
-<<<<<<< HEAD
         foreach ($members as $member) {
-=======
-        foreach ($request->members as $member) {
->>>>>>> d0ebb3949cb32d1a3ade5a96e35c6bd715a534b1
             $jury->members()->attach($member['user_id'], ['role' => $member['role']]);
         }
 
@@ -181,31 +166,21 @@ class JuryController extends Controller
     {
         $request->validate([
             'name'  => 'required|string|max:255',
-<<<<<<< HEAD
             'role'  => 'nullable|in:president,rapporteur,membre',
-=======
-            'role'  => 'required|in:president,rapporteur',
->>>>>>> d0ebb3949cb32d1a3ade5a96e35c6bd715a534b1
-            'email' => 'nullable|email|unique:users,email', // si tu ajoutes l’email
+            'email' => 'nullable|email|unique:users,email',
         ]);
 
-        $admin = auth()->user();
+        $admin = Auth::user();
 
         $user = User::create([
             'name'          => $request->name,
-            'email'         => $request->email ?? \Str::slug($request->name) . '+jury@example.com',
-            'password'      => bcrypt('password123'), // à voir pour la gestion réelle
+            'email'         => $request->email ?? Str::slug($request->name) . '+jury@example.com',
+            'password'      => bcrypt('password123'),
             'department_id' => $admin->department_id,
-<<<<<<< HEAD
             'role_name'     => 'teacher',
         ]);
 
         $user->assignRole('teacher');
-=======
-        ]);
-
-        $user->assignRole('jury'); // éventuellement aussi 'teacher'
->>>>>>> d0ebb3949cb32d1a3ade5a96e35c6bd715a534b1
 
         return response()->json([
             'success' => true,

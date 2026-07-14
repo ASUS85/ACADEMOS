@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ReportJuryEvaluation;
 
 class Report extends Model
 {
@@ -32,7 +33,12 @@ class Report extends Model
         'jury_note_fond',
         'jury_note_langage',
         'jury_moyenne_finale',
+        'jury_technical_note',
+        'jury_presentation_note',
+        'jury_content_note',
+        'jury_final_score',
         'jury_appreciation',
+        'jury_comment',
         'jury_commentaire',
         'jury_decision'
     ];
@@ -76,6 +82,11 @@ class Report extends Model
     public function comments()
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function juryEvaluations()
+    {
+        return $this->hasMany(ReportJuryEvaluation::class);
     }
 
     public function juryGroup()

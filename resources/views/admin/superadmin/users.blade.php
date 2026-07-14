@@ -7,7 +7,7 @@
                         <h1 class="h2 fw-bold">👑 SuperAdmin - Utilisateurs</h1>
                         <p class="text-muted">Gestion complète ({{ $users->total() }} utilisateurs)</p>
                     </div>
-                    <a href="{{ route('superadmin.admins.create') }}" class="btn btn-primary btn-lg">
+                    <a href="{{ route('superadmin.admins.create') }}" class="btn btn-primary btn-lg" data-loader-target="#globalLoader">
                         <i class="fas fa-plus"></i> Nouvel Admin
                     </a>
                 </div>
@@ -25,21 +25,27 @@
                             </thead>
                             <tbody>
                                 @foreach ($users as $user)
-                                    <tr>
-                                        <td>{{ $user->name }}</td>
-                                        <td>{{ $user->email }}</td>
-                                        <td>{{ $user->roles->pluck('name')->join(', ') }}</td>
-                                        <td>
-                                            <a href="{{ route('', $user) }}">Éditer</a>
-                                            <form action="{{ route('', $user) }}" method="POST"
-                                                style="display:inline;">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button
-                                                    onclick="return confirm('Supprimer cet utilisateur ?')">Supprimer</button>
-                                            </form>
-                                        </td>
-                                    </tr>
+                                <tr>
+                                    <td>{{ $user->name }}</td>
+                                    <td>{{ $user->email }}</td>
+                                    <td>{{ $user->roles->pluck('name')->join(', ') }}</td>
+                                    <td>
+                                        @php
+                                        $editRoute = $user->hasRole('admin')
+                                        ? route('superadmin.admins.edit', $user)
+                                        : ($user->hasRole('teacher')
+                                        ? route('superadmin.teachers.edit', $user)
+                                        : route('superadmin.students.edit', $user));
+                                        $deleteRoute = route('superadmin.users.destroy', $user);
+                                        @endphp
+                                        <a href="{{ $editRoute }}" data-loader-target="#globalLoader">Éditer</a>
+                                        <form id="deleteSuperGenericForm{{ $user->id }}" action="{{ $deleteRoute }}" method="POST" style="display:inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" data-confirm-title="Suppression utilisateur" data-confirm-message="Confirmez-vous la suppression de {{ $user->name }} ?" data-confirm-submit-label="Oui, supprimer" data-confirm-form-id="deleteSuperGenericForm{{ $user->id }}">Supprimer</button>
+                                        </form>
+                                    </td>
+                                </tr>
                                 @endforeach
                             </tbody>
                         </table>

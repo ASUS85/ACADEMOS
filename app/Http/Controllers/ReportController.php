@@ -3,13 +3,41 @@
 namespace App\Http\Controllers;
 
 use App\Models\Report;
+use App\Models\ReportJuryEvaluation;
+use App\Models\ReportVersion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Jury;
+use Illuminate\Support\Str;
 
 class ReportController extends Controller
 {
+    public function index(Request $request)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if ($user->hasAnyRole(['admin', 'superadmin'])) {
+            return $user->hasRole('superadmin') ? $this->superadminReports($request) : $this->adminIndex($request);
+        }
+
+        if ($user->hasRole('teacher')) {
+            return $this->teacherIndex();
+        }
+
+        if ($user->hasRole('student')) {
+            return $this->studentReportsIndex();
+        }
+
+        if ($user->hasRole('jury')) {
+            return $this->juryIndex();
+        }
+
+        abort(403);
+    }
+
     /**
      * Afficher le formulaire de soumission
      */
@@ -52,15 +80,49 @@ class ReportController extends Controller
         $cleanTitle = $this->cleanFileName($request->title);
         $studentNameClean = $this->cleanFileName(Auth::user()->name);
 
-        $fileName = "{$cleanTitle}-{$studentNameClean}-" . now()->format('Y-m-d') . ".{$extension}";
+        $report = Report::where('student_id', Auth::id())
+            ->latest('created_at')
+            ->first();
 
+        if (!$report) {
+            $fileName = "{$cleanTitle}-{$studentNameClean}-" . now()->format('Y-m-d') . ".{$extension}";
+            $filePath = $request->file('file')->storeAs('reports', $fileName, 'public');
+
+            $report = Report::create([
+                'student_id' => Auth::id(),
+                'title' => $request->title,
+                'file_path' => $filePath,
+                'status' => Report::STATUS_SUBMITTED,
+            ]);
+
+            ReportVersion::create([
+                'report_id' => $report->id,
+                'user_id' => Auth::id(),
+                'version' => 'v1',
+                'file_path' => $filePath,
+                'action' => 'soumis',
+            ]);
+
+            return redirect('/dashboard')->with('success', '✅ Rapport soumis !');
+        }
+
+        $versionNumber = $report->versions()->count() + 1;
+        $version = 'v' . $versionNumber;
+        $fileName = "rapport-{$report->id}-{$version}-" . now()->format('Ymd') . '.' . $extension;
         $filePath = $request->file('file')->storeAs('reports', $fileName, 'public');
 
-        Report::create([
-            'student_id' => Auth::id(),
-            'title' => $request->title,
+        ReportVersion::create([
+            'report_id' => $report->id,
+            'user_id' => Auth::id(),
+            'version' => $version,
             'file_path' => $filePath,
-            'status' => 'Soumis'
+            'action' => 'modifié',
+        ]);
+
+        $report->update([
+            'title' => $request->title ?: $report->title,
+            'file_path' => $filePath,
+            'status' => Report::STATUS_SUBMITTED,
         ]);
 
         return redirect('/dashboard')->with('success', '✅ Rapport soumis !');
@@ -71,12 +133,41 @@ class ReportController extends Controller
      */
     public function studentDashboard()
     {
-        $reports = auth()->user()->reports()
-            ->with(['versions.user', 'teacher', 'jury'])
+        /** @var User $user */
+        $user = Auth::user();
+
+        $latestReport = $user->reports()
+            ->with(['versions', 'latestVersion', 'teacher', 'juryGroup.members'])
             ->latest()
-            ->get();
-        $latestReport = $reports->first();
-        return view('student.dashboard', compact('reports', 'latestReport'));
+            ->first();
+
+        $historyVersions = ReportVersion::with(['report.student.filiere', 'report.teacher', 'report.latestVersion', 'report.juryGroup.members'])
+            ->whereHas('report', function ($query) use ($user) {
+                $query->where('student_id', $user->id);
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('student.dashboard', compact('historyVersions', 'latestReport'));
+    }
+
+    public function studentReportsIndex()
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasRole('student')) {
+            abort(403);
+        }
+
+        $reports = $user->reports()
+            ->with(['teacher', 'latestVersion', 'versions.user', 'juryGroup.members', 'comments.user'])
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('student.reports.index', compact('reports'));
     }
 
     /**
@@ -84,19 +175,23 @@ class ReportController extends Controller
      */
     public function resubmit(Request $request, Report $report)
     {
-        if (auth()->id() !== $report->student_id) abort(403);
+        /** @var User $user */
+        $user = Auth::user();
 
-        $request->validate(['file' => 'required|file|mimes:pdf|max:10240']);
+        if ($user->id !== $report->student_id) abort(403);
+
+        $request->validate(['file' => 'required|file|mimes:pdf,doc,docx|max:10240']);
 
         $versionNumber = $report->versions()->count() + 1;
         $version = 'v' . $versionNumber;
 
-        $fileName = "rapport-{$report->id}-{$version}-" . now()->format('Ymd') . '.pdf';
+        $extension = $request->file('file')->getClientOriginalExtension();
+        $fileName = "rapport-{$report->id}-{$version}-" . now()->format('Ymd') . '.' . $extension;
         $filePath = $request->file('file')->storeAs('reports', $fileName, 'public');
 
         \App\Models\ReportVersion::create([
             'report_id' => $report->id,
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'version' => $version,
             'file_path' => $filePath,
             'action' => 'modifié'
@@ -106,13 +201,107 @@ class ReportController extends Controller
         return back()->with('success', "✅ Version {$version} envoyée !");
     }
 
+    public function previewVersion(ReportVersion $version)
+    {
+        $this->authorizeReportVersionFileAccess($version);
+
+        abort_if(!$version->file_path || !Storage::disk('public')->exists($version->file_path), 404);
+
+        return response()->file(Storage::disk('public')->path($version->file_path), [
+            'Content-Disposition' => 'inline',
+        ]);
+    }
+
+    public function downloadVersion(ReportVersion $version)
+    {
+        $this->authorizeReportVersionFileAccess($version);
+
+        abort_if(!$version->file_path || !Storage::disk('public')->exists($version->file_path), 404);
+
+        return response()->download(Storage::disk('public')->path($version->file_path));
+    }
+
+    public function destroyVersion(ReportVersion $version)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        $report = $version->report()->with(['versions', 'juryGroup.members'])->firstOrFail();
+
+        if (!$user->hasRole('student') || $report->student_id !== $user->id) {
+            abort(403);
+        }
+
+        $isLocked = $report->teacher_id || ($report->juryGroup?->members?->count() ?? 0) > 0 || in_array($report->status, [
+            Report::STATUS_ASSIGNED,
+            Report::STATUS_COMMENTED,
+            Report::STATUS_VALIDATED,
+            Report::STATUS_JURY_PENDING,
+            Report::STATUS_FINAL,
+            Report::STATUS_REJECTED,
+        ], true);
+
+        $latestVersionId = $report->latestVersion?->id;
+        $isLatestVersion = (int) $latestVersionId === (int) $version->id;
+
+        if ($isLatestVersion && $isLocked) {
+            return back()->withErrors('Ce rapport est déjà pris en charge et sa dernière version ne peut pas être supprimée.');
+        }
+
+        if ($version->file_path) {
+            Storage::disk('public')->delete($version->file_path);
+        }
+
+        $version->delete();
+
+        if ($isLatestVersion) {
+            $previousVersion = $report->versions()->latest('created_at')->first();
+
+            if ($previousVersion) {
+                $report->update(['file_path' => $previousVersion->file_path]);
+            } else {
+                $report->delete();
+            }
+        }
+
+        return back()->with('success', 'Version supprimée avec succès.');
+    }
+
     /**
      * Dashboard enseignant
      */
     public function teacherIndex()
     {
-        $reports = auth()->user()->assignedReports()->with('student')->latest()->get();
+        /** @var User $user */
+        $user = Auth::user();
+
+        $reports = $user->assignedReports()
+            ->with(['student', 'latestVersion', 'versions.user', 'comments.user', 'juryGroup.members'])
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
         return view('teacher.reports.index', compact('reports'));
+    }
+
+    /**
+     * Tableau enseignant pour les rapports où il est membre du jury
+     */
+    public function teacherJuryIndex()
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasRole('teacher')) {
+            abort(403);
+        }
+
+        $reports = $user->juryReports()
+            ->with(['student.filiere', 'teacher', 'latestVersion', 'versions.user', 'juryGroup.members', 'juryEvaluations.user'])
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('teacher.jury.index', compact('reports'));
     }
 
     /**
@@ -120,36 +309,55 @@ class ReportController extends Controller
      */
     public function teacherComment(Request $request, Report $report)
     {
-        if (!auth()->user()->hasRole('teacher') || $report->teacher_id !== auth()->id()) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasRole('teacher') || $report->teacher_id !== $user->id) {
             abort(403);
         }
 
         $request->validate([
             'comment' => 'required|string|max:1000',
-            'action' => 'required|in:commenter,valider'
+            'action' => 'required|in:commenter,valider,rejeter'
         ]);
 
         // Enregistrer le commentaire
         \App\Models\Comment::create([
             'report_id' => $report->id,
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'comment' => $request->comment,
         ]);
 
-        // Gestion action
+        $updateData = [
+            'teacher_comment' => $request->comment,
+            'teacher_status' => match ($request->action) {
+                'valider' => 'Validé par enseignant',
+                'rejeter' => 'Rejeté par enseignant',
+                default => 'Commenté',
+            },
+        ];
+
         if ($request->action === 'valider') {
-            $report->update([
-                'status' => Report::STATUS_VALIDATED // ✅ mieux avec constante
-            ]);
+            $updateData['status'] = Report::STATUS_VALIDATED;
+
+            $report->update($updateData);
 
             return back()->with('success', '✅ Rapport validé avec succès');
         }
 
-        $report->update([
-            'status' => 'commenté'
-        ]);
+        if ($request->action === 'rejeter') {
+            $updateData['status'] = Report::STATUS_REJECTED;
 
-        return back()->with('success', '✅ Demande de correction envoyée');
+            $report->update($updateData);
+
+            return back()->with('success', '✅ Rapport rejeté avec commentaire');
+        }
+
+        $updateData['status'] = Report::STATUS_COMMENTED;
+
+        $report->update($updateData);
+
+        return back()->with('success', '✅ Commentaire enregistré avec succès');
     }
 
     /**
@@ -157,7 +365,10 @@ class ReportController extends Controller
      */
     public function assign(Request $request, Report $report)
     {
-        if (!auth()->user()->hasAnyRole(['admin', 'superadmin'])) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['admin', 'superadmin'])) {
             abort(403);
         }
 
@@ -165,8 +376,8 @@ class ReportController extends Controller
 
         $teacher = User::role('teacher')
             ->where('id', $request->teacher_id)
-            ->when(auth()->user()->hasRole('admin'), function ($query) {
-                $query->where('department_id', auth()->user()->department_id);
+            ->when($user->hasRole('admin'), function ($query) use ($user) {
+                $query->where('department_id', $user->department_id);
             })
             ->firstOrFail();
 
@@ -186,7 +397,10 @@ class ReportController extends Controller
      */
     public function removeTeacher(Report $report)
     {
-        if (!auth()->user()->hasAnyRole(['admin', 'superadmin'])) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['admin', 'superadmin'])) {
             abort(403);
         }
 
@@ -205,7 +419,10 @@ class ReportController extends Controller
      */
     public function assignJury(Request $request, Report $report)
     {
-        if (!auth()->user()->hasAnyRole(['admin', 'superadmin'])) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['admin', 'superadmin'])) {
             abort(403);
         }
 
@@ -232,6 +449,18 @@ class ReportController extends Controller
             ->unique()
             ->values();
 
+        $submittedIds = collect($validated['member_ids'] ?? [])
+            ->push((int) $validated['president_id'])
+            ->push((int) $validated['rapporteur_id'])
+            ->when($report->teacher_id, fn($ids) => $ids->push((int) $report->teacher_id));
+
+        if ($submittedIds->count() !== $submittedIds->unique()->count()) {
+            return response()->json([
+                'success' => false,
+                'message' => '❌ Un enseignant ne peut pas occuper deux postes dans le même jury'
+            ], 422);
+        }
+
         if ($memberIds->count() > 4) {
             return response()->json([
                 'success' => false,
@@ -241,8 +470,8 @@ class ReportController extends Controller
 
         $teachersCount = User::role('teacher')
             ->whereIn('id', $memberIds)
-            ->when(auth()->user()->hasRole('admin'), function ($query) {
-                $query->where('department_id', auth()->user()->department_id);
+            ->when($user->hasRole('admin'), function ($query) use ($user) {
+                $query->where('department_id', $user->department_id);
             })
             ->count();
 
@@ -256,7 +485,7 @@ class ReportController extends Controller
         // 3) Créer / récupérer le jury pour ce rapport
         $jury = Jury::updateOrCreate(
             ['report_id' => $report->id],
-            ['department_id' => $report->student?->department_id ?? auth()->user()->department_id]
+            ['department_id' => $report->student?->department_id ?? $user->department_id]
         );
 
         // 4) Réinitialiser les membres
@@ -287,7 +516,6 @@ class ReportController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '✅ Jury constitué avec succès'
             'message' => '✅ Jury constitué avec succès'
         ]);
     }
@@ -321,12 +549,15 @@ class ReportController extends Controller
      */
     public function juryIndex()
     {
-        if (!auth()->user()->hasAnyRole(['teacher', 'jury'])) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['teacher', 'jury'])) {
             abort(403);
         }
 
-        $reports = auth()->user()->juryReports()
-            ->with(['student.filiere', 'teacher', 'juryGroup.members'])
+        $reports = $user->juryReports()
+            ->with(['student.filiere', 'teacher', 'latestVersion', 'versions.user', 'juryGroup.members', 'juryEvaluations.user'])
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -339,7 +570,10 @@ class ReportController extends Controller
      */
     public function juryEvaluate(Request $request, Report $report)
     {
-        if (!auth()->user()->hasAnyRole(['teacher', 'jury']) || !$report->juryGroup?->members->contains('id', auth()->id())) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['teacher', 'jury']) || !$report->juryGroup?->members->contains('id', $user->id)) {
             abort(403);
         }
 
@@ -351,33 +585,116 @@ class ReportController extends Controller
             'jury_decision' => 'required|in:Validé,Rejeté,À revoir'
         ]);
 
-        $moyenne = round(($request->jury_technical_note + $request->jury_presentation_note + $request->jury_content_note) / 3, 2);
+        $evaluationScore = round((
+            $request->jury_technical_note +
+            $request->jury_presentation_note +
+            $request->jury_content_note
+        ) / 3, 2);
+
+        ReportJuryEvaluation::updateOrCreate(
+            [
+                'report_id' => $report->id,
+                'user_id' => $user->id,
+            ],
+            [
+                'technical_note' => $request->jury_technical_note,
+                'presentation_note' => $request->jury_presentation_note,
+                'content_note' => $request->jury_content_note,
+                'final_score' => $evaluationScore,
+                'decision' => $request->jury_decision,
+                'comment' => $request->jury_comment,
+            ]
+        );
+
+        $summary = $this->refreshJuryFinalState($report);
+
+        $message = $summary['completed']
+            ? "✅ Toutes les notes sont enregistrées. Note finale: {$summary['final_score']}/20"
+            : "✅ Votre note a été enregistrée. {$summary['submitted']}/{$summary['total']} membre(s) ont déjà noté ce rapport.";
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    private function refreshJuryFinalState(Report $report): array
+    {
+        $report->loadMissing(['juryGroup.members', 'juryEvaluations']);
+
+        $totalMembers = $report->juryGroup?->members?->count() ?? 0;
+        $submittedEvaluations = $report->juryEvaluations->count();
+
+        if ($totalMembers === 0) {
+            return [
+                'completed' => false,
+                'submitted' => 0,
+                'total' => 0,
+                'final_score' => null,
+            ];
+        }
+
+        if ($submittedEvaluations < $totalMembers) {
+            $report->update([
+                'status' => Report::STATUS_JURY_PENDING,
+            ]);
+
+            return [
+                'completed' => false,
+                'submitted' => $submittedEvaluations,
+                'total' => $totalMembers,
+                'final_score' => null,
+            ];
+        }
+
+        $averageTechnical = round((float) $report->juryEvaluations->avg('technical_note'), 2);
+        $averagePresentation = round((float) $report->juryEvaluations->avg('presentation_note'), 2);
+        $averageContent = round((float) $report->juryEvaluations->avg('content_note'), 2);
+        $averageFinal = round((float) $report->juryEvaluations->avg('final_score'), 2);
+
+        $decisionVotes = $report->juryEvaluations->countBy('decision');
+        $topVotes = $decisionVotes->max();
+        $dominantDecisions = $decisionVotes->filter(fn ($count) => $count === $topVotes)->keys();
+
+        $finalDecision = $dominantDecisions->count() === 1
+            ? $dominantDecisions->first()
+            : match (true) {
+                $averageFinal >= 14 => 'Validé',
+                $averageFinal >= 10 => 'À revoir',
+                default => 'Rejeté',
+            };
 
         $appreciation = match (true) {
-            $moyenne >= 18 => 'Très Honorable',
-            $moyenne >= 16 => 'Très Bien',
-            $moyenne >= 14 => 'Bien',
-            $moyenne >= 12 => 'Assez Bien',
-            $moyenne >= 10 => 'Passable',
-            default => 'Échec'
+            $averageFinal >= 18 => 'Très Honorable',
+            $averageFinal >= 16 => 'Très Bien',
+            $averageFinal >= 14 => 'Bien',
+            $averageFinal >= 12 => 'Assez Bien',
+            $averageFinal >= 10 => 'Passable',
+            default => 'Échec',
         };
 
         $report->update([
-            'jury_technical_note' => $request->jury_technical_note,
-            'jury_presentation_note' => $request->jury_presentation_note,
-            'jury_content_note' => $request->jury_content_note,
-            'jury_final_score' => $moyenne,
-            'jury_decision' => $request->jury_decision,
-            'jury_comment' => $request->jury_comment,
-            'status' => $request->jury_decision === 'Validé' ? 'Validé final' : $request->jury_decision
+            'jury_technical_note' => $averageTechnical,
+            'jury_presentation_note' => $averagePresentation,
+            'jury_content_note' => $averageContent,
+            'jury_final_score' => $averageFinal,
+            'jury_decision' => $finalDecision,
+            'jury_comment' => "Évaluation collégiale enregistrée par {$submittedEvaluations}/{$totalMembers} membre(s) du jury.",
+            'jury_appreciation' => $appreciation,
+            'status' => $finalDecision === 'Validé' ? Report::STATUS_FINAL : $finalDecision,
         ]);
 
-        return redirect()->back()->with('success', "✅ Évaluation terminée ! Moyenne: {$moyenne}/20 ({$appreciation})");
+        return [
+            'completed' => true,
+            'submitted' => $submittedEvaluations,
+            'total' => $totalMembers,
+            'final_score' => $averageFinal,
+        ];
     }
 
     public function addJuryMember(Request $request)
     {
-        if (!auth()->user()->hasAnyRole(['admin', 'superadmin'])) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['admin', 'superadmin'])) {
             abort(403);
         }
 
@@ -386,11 +703,11 @@ class ReportController extends Controller
             'email' => ['nullable', 'email', 'unique:users,email'],
         ]);
 
-        $departmentId = auth()->user()->department_id;
+        $departmentId = $user->department_id;
 
         $teacher = User::create([
             'name' => $validated['name'],
-            'email' => $validated['email'] ?? \Str::slug($validated['name']) . '+teacher-' . now()->timestamp . '@academos.local',
+            'email' => $validated['email'] ?? Str::slug($validated['name']) . '+teacher-' . now()->timestamp . '@academos.local',
             'password' => bcrypt('password123'),
             'department_id' => $departmentId,
             'role_name' => 'teacher',
@@ -410,19 +727,30 @@ class ReportController extends Controller
     /**
      * Index administrateur
      */
-    public function adminIndex(Request $request, Report $report)
-    public function adminIndex(Request $request, Report $report)
+    public function adminIndex(Request $request)
     {
+        /** @var User $user */
+        $user = Auth::user();
 
+        $query = Report::with(['student.filiere', 'teacher', 'latestVersion', 'comments.user', 'juryGroup.members'])
+            ->whereHas('student', function ($studentQuery) use ($user) {
+                $studentQuery->where('department_id', $user->department_id);
+            });
 
-        $user = auth()->user();
+        if ($request->filled('search')) {
+            $search = $request->search;
 
-        $query = Report::with(['student.filiere', 'teacher', 'comments.user', 'juryGroup.members']);
-
-        // Filtre département admin
-        $query->whereHas('student', function ($q) use ($user) {
-            $q->where('department_id', $user->department_id);
-        });
+            $query->where(function ($searchQuery) use ($search) {
+                $searchQuery->where('title', 'like', "%{$search}%")
+                    ->orWhereHas('student', function ($studentQuery) use ($search) {
+                        $studentQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('matricule', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('teacher', function ($teacherQuery) use ($search) {
+                        $teacherQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
 
         // Filtre filière
         if ($request->filled('filiere')) {
@@ -444,25 +772,118 @@ class ReportController extends Controller
         $filieres = \App\Models\Filiere::where('department_id', $user->department_id)->get();
 
         //récuperer les teachers
-        $teachers = User::role('teacher')->where('department_id', $user->department_id)->get();
+        $availableTeachers = User::role('teacher')->where('department_id', $user->department_id)->get();
 
-        return view('admin.reports.index', compact('reports', 'filieres', 'teachers'));
-        //récuperer les teachers
-        $teachers = User::role('teacher')->where('department_id', $user->department_id)->get();
-
-        return view('admin.reports.index', compact('reports', 'filieres', 'teachers'));
+        return view('admin.reports.index', compact('reports', 'filieres', 'availableTeachers'));
     }
 
-    public function superadminReports()
+    public function superadminReports(Request $request)
     {
-        $reports = Report::with(['student.filiere', 'teacher', 'comments.user', 'juryGroup.members'])
+        $query = Report::with(['student.filiere', 'teacher', 'latestVersion', 'comments.user', 'juryGroup.members'])
             ->latest()
-            ->withCount('comments')
-            ->paginate(10)
-            ->withQueryString();
-        $teachers = User::role('teacher')->get();
+            ->withCount('comments');
 
-        return view('admin.reports.index', compact('reports', 'teachers'));
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($searchQuery) use ($search) {
+                $searchQuery->where('title', 'like', "%{$search}%")
+                    ->orWhereHas('student', function ($studentQuery) use ($search) {
+                        $studentQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('matricule', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('teacher', function ($teacherQuery) use ($search) {
+                        $teacherQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $reports = $query->paginate(10)->withQueryString();
+        $availableTeachers = User::role('teacher')->get();
+
+        return view('admin.reports.index', compact('reports', 'availableTeachers'));
+    }
+
+    public function destroy(Report $report)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (!$user->hasAnyRole(['admin', 'superadmin'])) {
+            abort(403);
+        }
+
+        foreach ($report->versions as $version) {
+            if ($version->file_path) {
+                Storage::disk('public')->delete($version->file_path);
+            }
+        }
+
+        if ($report->file_path) {
+            Storage::disk('public')->delete($report->file_path);
+        }
+
+        $report->delete();
+
+        return back()->with('success', 'Rapport supprimé avec succès.');
+    }
+
+    public function preview(Report $report)
+    {
+        $this->authorizeReportFileAccess($report);
+
+        $filePath = $this->resolveReportFilePath($report);
+
+        abort_if(!$filePath || !Storage::disk('public')->exists($filePath), 404);
+
+        return response()->file(Storage::disk('public')->path($filePath), [
+            'Content-Disposition' => 'inline',
+        ]);
+    }
+
+    public function download(Report $report)
+    {
+        $this->authorizeReportFileAccess($report);
+
+        $filePath = $this->resolveReportFilePath($report);
+
+        abort_if(!$filePath || !Storage::disk('public')->exists($filePath), 404);
+
+        return response()->download(Storage::disk('public')->path($filePath));
+    }
+
+    private function resolveReportFilePath(Report $report): ?string
+    {
+        return $report->latestVersion?->file_path ?? $report->file_path;
+    }
+
+    private function authorizeReportFileAccess(Report $report): void
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if ($user->hasAnyRole(['admin', 'superadmin'])) {
+            return;
+        }
+
+        if ($user->hasRole('student') && $report->student_id === $user->id) {
+            return;
+        }
+
+        if ($user->hasRole('teacher') && $report->teacher_id === $user->id) {
+            return;
+        }
+
+        if ($user->hasRole('jury') && $report->juryGroup?->members?->contains('id', $user->id)) {
+            return;
+        }
+
+        abort(403);
+    }
+
+    private function authorizeReportVersionFileAccess(ReportVersion $version): void
+    {
+        $this->authorizeReportFileAccess($version->report()->with('juryGroup.members')->firstOrFail());
     }
 
     /**

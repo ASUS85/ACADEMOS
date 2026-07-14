@@ -5,7 +5,7 @@
         <div class="d-flex justify-content-between mb-4">
             <h3>👨‍🏫 Mes Enseignants</h3>
 
-            <a href="{{ route('admin.teachers.create') }}" class="btn btn-primary">
+            <a href="{{ route('admin.teachers.create') }}" class="btn btn-primary" data-loader-target="#globalLoader">
                 ➕ Ajouter enseignant
             </a>
         </div>
@@ -25,32 +25,31 @@
             <tbody>
 
                 @foreach ($users as $user)
-                    <tr>
-                        <td>{{ $user->name }}</td>
-                        <td>{{ $user->email }}</td>
-                        <td>{{ $user->matricule }}</td>
-                        <td>{{ $user->grade }}</td>
+                <tr>
+                    <td>{{ $user->name }}</td>
+                    <td>{{ $user->email }}</td>
+                    <td>{{ $user->matricule }}</td>
+                    <td>{{ $user->grade }}</td>
 
-                        <td>
+                    <td>
 
-                            <a href="{{ route('admin.teachers.edit', $user) }}" class="btn btn-sm btn-warning">
-                                Modifier
-                            </a>
+                        <a href="{{ route('admin.teachers.edit', $user) }}" class="btn btn-sm btn-warning" data-loader-target="#globalLoader">
+                            Modifier
+                        </a>
 
-                            <form action="{{ route('admin.teachers.destroy', $user) }}" method="POST"
-                                style="display:inline">
-                                @csrf
-                                @method('DELETE')
+                        <form id="deleteTeacherIndexForm{{ $user->id }}" action="{{ route('admin.teachers.destroy', $user) }}" method="POST" style="display:inline">
+                            @csrf
+                            @method('DELETE')
 
-                                <button class="btn btn-danger btn-sm" onclick="return confirm('Supprimer ?')">
-                                    Delete
-                                </button>
+                            <button type="button" class="btn btn-danger btn-sm" data-confirm-title="Suppression enseignant" data-confirm-message="Confirmez-vous la suppression de {{ $user->name }} ?" data-confirm-submit-label="Oui, supprimer" data-confirm-form-id="deleteTeacherIndexForm{{ $user->id }}">
+                                Delete
+                            </button>
 
-                            </form>
+                        </form>
 
-                        </td>
+                    </td>
 
-                    </tr>
+                </tr>
                 @endforeach
 
             </tbody>

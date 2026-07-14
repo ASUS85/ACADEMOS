@@ -36,9 +36,11 @@
             align-items: center;
             justify-content: center;
         }
-        #add-teacher{
+
+        #add-teacher {
             cursor: pointer;
         }
+
     </style>
 
 
@@ -46,8 +48,7 @@
         {{-- Header --}}
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div class="d-flex align-items-center">
-                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3"
-                    style="width:56px;height:56px;">
+                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width:56px;height:56px;">
                     <i class="fas fa-chalkboard-teacher fa-lg"></i>
                 </div>
                 <div>
@@ -58,8 +59,7 @@
                 </div>
             </div>
 
-            <button type="button" id="add-teacher" class="btn btn-primary d-flex align-items-center gap-2 rounded-pill"
-                data-bs-toggle="modal" data-bs-target="#createTeacherModal">
+            <button type="button" id="add-teacher" class="btn btn-primary d-flex align-items-center gap-2 rounded-pill" data-bs-toggle="modal" data-bs-target="#createTeacherModal">
                 <i class="fas fa-plus"></i>
                 <span>Nouvel enseignant</span>
             </button>
@@ -76,24 +76,22 @@
                         <select name="filiere" class="form-select">
                             <option value="">Toutes les filières</option>
                             @foreach ($filieres as $f)
-                                <option value="{{ $f->id }}"
-                                    {{ request('filiere') == $f->id ? 'selected' : '' }}>
-                                    {{ $f->name }}
-                                </option>
+                            <option value="{{ $f->id }}" {{ request('filiere') == $f->id ? 'selected' : '' }}>
+                                {{ $f->name }}
+                            </option>
                             @endforeach
                         </select>
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold text-muted text-uppercase">Recherche</label>
-                        <input type="text" name="search" class="form-control" placeholder="Nom ou email..."
-                            value="{{ request('search') }}">
+                        <input type="text" name="search" class="form-control" placeholder="Nom ou email..." value="{{ request('search') }}">
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold text-muted text-uppercase">&nbsp;</label>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-primary flex-grow-1" data-loader-target="#globalLoader">
+                            <button type="submit" class="btn btn-primary flex-grow-1" data-loader-target="#globalLoader">
                                 <i class="fas fa-filter me-1"></i> Filtrer
                             </button>
                             <a href="{{ route('admin.teachers.index') }}" class="btn btn-outline-secondary" data-loader-target="#globalLoader">
@@ -121,18 +119,16 @@
 
                     <tbody>
                         @forelse($teachers as $teacher)
-                            <tr>
-                                <td class="ps-4">
-                                    <div class="d-flex align-items-center">
-                                        <img src="https://ui-avatars.com/api/?name={{ urlencode($teacher->name) }}&background=2563EB&color=fff&size=40&rounded=true"
-                                            class="rounded-circle me-3 avatar-ring" width="40" height="40"
-                                            alt="Avatar">
-                                        <div>
-                                            <div class="fw-semibold text-dark">{{ $teacher->name }}</div>
-                                            <small class="text-muted">Enseignant</small>
-                                        </div>
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <img src="https://ui-avatars.com/api/?name={{ urlencode($teacher->name) }}&background=2563EB&color=fff&size=40&rounded=true" class="rounded-circle me-3 avatar-ring" width="40" height="40" alt="Avatar">
+                                    <div>
+                                        <div class="fw-semibold text-dark">{{ $teacher->name }}</div>
+                                        <small class="text-muted">Enseignant</small>
                                     </div>
-                                </td>
+                                </div>
+                            </td>
 
                             <td class="text-muted small">
                                 {{ $teacher->email }}
@@ -191,24 +187,22 @@
                                 </span>
                             </td>
 
-                                <td class="text-center">
-                                    <div class="d-inline-flex gap-2">
-                                        <a href="{{ route('admin.teachers.edit', $teacher) }}"
-                                            class="btn btn-light border btn-icon" title="Modifier">
-                                            <i class="fas fa-pen text-primary"></i>
-                                        </a>
+                            <td class="text-center">
+                                <div class="d-inline-flex gap-2">
+                                    <a href="{{ route('admin.teachers.edit', $teacher) }}" class="btn btn-light border btn-icon" title="Modifier">
+                                        <i class="fas fa-pen text-primary"></i>
+                                    </a>
 
-                                        <form action="{{ route('admin.teachers.destroy', $teacher) }}" method="POST"
-                                            class="d-inline" onsubmit="return confirm('Supprimer cet enseignant ?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="btn btn-light border btn-icon" title="Supprimer">
-                                                <i class="fas fa-trash text-danger"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
+                                    <form id="deleteTeacherForm{{ $teacher->id }}" action="{{ route('admin.teachers.destroy', $teacher) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="button" class="btn btn-light border btn-icon" title="Supprimer" data-confirm-title="Suppression de l'enseignant" data-confirm-message="Confirmez-vous la suppression de cet enseignant ?" data-confirm-submit-label="Oui, supprimer" data-confirm-form-id="deleteTeacherForm{{ $teacher->id }}">
+                                            <i class="fas fa-trash text-danger"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
                         @empty
                         <tr>
                             <td colspan="7" class="text-center text-muted py-5">
@@ -224,9 +218,9 @@
             </div>
 
             @if (method_exists($teachers, 'links'))
-                <div class="card-footer bg-white border-0 pt-3 d-flex justify-content-end">
-                    {{ $teachers->links('pagination::bootstrap-5') }}
-                </div>
+            <div class="card-footer bg-white border-0 pt-3 d-flex justify-content-end">
+                {{ $teachers->links('pagination::bootstrap-5') }}
+            </div>
             @endif
         </div>
     </div>
@@ -239,106 +233,87 @@
                     <h5 class="modal-title">
                         <i class="fas fa-chalkboard-teacher me-2"></i>Nouvel enseignant
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <form method="POST" action="{{ route('admin.teachers.store') }}">
+                <form id="createTeacherForm" method="POST" action="{{ route('admin.teachers.store') }}">
                     @csrf
                     <div class="modal-body p-4">
                         <div class="row g-3">
 
                             {{-- NOM --}}
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold text-muted mb-2">Nom complet <span
-                                        class="text-danger">*</span></label>
-                                <input type="text" name="name"
-                                    class="form-control @error('name') is-invalid @enderror"
-                                    placeholder="Ex: Jean DUPONT" value="{{ old('name') }}" required>
+                                <label class="form-label fw-semibold text-muted mb-2">Nom complet <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" placeholder="Ex: Jean DUPONT" value="{{ old('name') }}" required>
                                 @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
                             {{-- EMAIL --}}
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold text-muted mb-2">Email <span
-                                        class="text-danger">*</span></label>
-                                <input type="email" name="email"
-                                    class="form-control @error('email') is-invalid @enderror"
-                                    placeholder="Ex: jean.dupont@univ.cm" value="{{ old('email') }}" required>
+                                <label class="form-label fw-semibold text-muted mb-2">Email <span class="text-danger">*</span></label>
+                                <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="Ex: jean.dupont@univ.cm" value="{{ old('email') }}" required>
                                 @error('email')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
                             {{-- MATRICULE --}}
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold text-muted mb-2">Matricule <span
-                                        class="text-danger">*</span></label>
-                                <input type="text" name="matricule"
-                                    class="form-control @error('matricule') is-invalid @enderror"
-                                    placeholder="Ex: ENS-2024-001" value="{{ old('matricule') }}" required>
+                                <label class="form-label fw-semibold text-muted mb-2">Matricule <span class="text-danger">*</span></label>
+                                <input type="text" name="matricule" class="form-control @error('matricule') is-invalid @enderror" placeholder="Ex: ENS-2024-001" value="{{ old('matricule') }}" required>
                                 @error('matricule')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
                             {{-- GRADE --}}
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold text-muted mb-2">Grade <span
-                                        class="text-danger">*</span></label>
-                                <select name="grade" class="form-select @error('grade') is-invalid @enderror"
-                                    required>
+                                <label class="form-label fw-semibold text-muted mb-2">Grade <span class="text-danger">*</span></label>
+                                <select name="grade" class="form-select @error('grade') is-invalid @enderror" required>
                                     <option value="">Choisir un grade</option>
                                     <option value="Professeur" {{ old('grade') == 'Professeur' ? 'selected' : '' }}>
                                         Professeur</option>
-                                    <option value="Maître de conférences"
-                                        {{ old('grade') == 'Maître de conférences' ? 'selected' : '' }}>Maître de
+                                    <option value="Maître de conférences" {{ old('grade') == 'Maître de conférences' ? 'selected' : '' }}>Maître de
                                         conférences</option>
-                                    <option value="Chargé de cours"
-                                        {{ old('grade') == 'Chargé de cours' ? 'selected' : '' }}>Chargé de cours
+                                    <option value="Chargé de cours" {{ old('grade') == 'Chargé de cours' ? 'selected' : '' }}>Chargé de cours
                                     </option>
                                     <option value="Assistant" {{ old('grade') == 'Assistant' ? 'selected' : '' }}>
                                         Assistant</option>
                                 </select>
                                 @error('grade')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
                             {{-- SPÉCIALITÉ (filiere_id) --}}
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold text-muted mb-2">Spécialité <span
-                                        class="text-danger">*</span></label>
-                                <select name="specialite"
-                                    class="form-select @error('specialite') is-invalid @enderror" required>
+                                <label class="form-label fw-semibold text-muted mb-2">Spécialité <span class="text-danger">*</span></label>
+                                <select name="specialite" class="form-select @error('specialite') is-invalid @enderror" required>
                                     <option value="">Choisir une spécialité</option>
                                     @foreach ($filieres as $filiere)
-                                        <option value="{{ $filiere->id }}"
-                                            {{ old('specialite') == $filiere->id ? 'selected' : '' }}>
-                                            {{ $filiere->name }}
-                                        </option>
+                                    <option value="{{ $filiere->id }}" {{ old('specialite') == $filiere->id ? 'selected' : '' }}>
+                                        {{ $filiere->name }}
+                                    </option>
                                     @endforeach
                                 </select>
                                 @error('specialite')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
                             {{-- SEXE --}}
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold text-muted mb-2">Sexe <span
-                                        class="text-danger">*</span></label>
-                                <select name="sexe" class="form-select @error('sexe') is-invalid @enderror"
-                                    required>
+                                <label class="form-label fw-semibold text-muted mb-2">Sexe <span class="text-danger">*</span></label>
+                                <select name="sexe" class="form-select @error('sexe') is-invalid @enderror" required>
                                     <option value="">Choisir le sexe</option>
                                     <option value="M" {{ old('sexe') == 'M' ? 'selected' : '' }}>Masculin
                                     </option>
                                     <option value="F" {{ old('sexe') == 'F' ? 'selected' : '' }}>Féminin</option>
                                 </select>
                                 @error('sexe')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
@@ -355,7 +330,7 @@
                         <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
                             <i class="fas fa-times me-2"></i>Annuler
                         </button>
-                        <button type="submit" class="btn btn-primary px-4">
+                        <button type="button" class="btn btn-primary px-4" data-confirm-title="Création d'un enseignant" data-confirm-message="Confirmez-vous l'ajout de ce nouvel enseignant ?" data-confirm-submit-label="Oui, créer" data-confirm-form-id="createTeacherForm">
                             <i class="fas fa-save me-2"></i>Créer l'enseignant
                         </button>
                     </div>
@@ -364,19 +339,15 @@
         </div>
     </div>
 
-        <script>
-            const addTeacher = document.getElementById("add-teacher");
+    <script>
+        const addTeacher = document.getElementById("add-teacher");
 
-            addTeacher.addEventListener('click', function(){
-                const modal = new bootstrap.Modal(document.getElementById('createTeacherModal'));
-                modal.show();
-            });
+        addTeacher.addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('createTeacherModal'));
+            modal.show();
+        });
 
-           /*  document.addEventListener('DOMContentLoaded', function() {
-                const modal = new bootstrap.Modal(document.getElementById('createTeacherModal'));
-                modal.show();
-            }); */
-        </script>
+    </script>
 
 
 </x-app-layout>

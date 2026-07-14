@@ -1,848 +1,608 @@
 <x-app-layout>
+    @php
+    $currentUser = auth()->user();
+    $isAdmin = $currentUser->hasAnyRole(['admin', 'superadmin']);
+    $pageTitle = $currentUser->hasRole('superadmin') ? 'Rapports globaux' : 'Rapports du département';
+    $searchValue = request('search');
+    @endphp
+
     <style>
-        :root {
-            --purple: #6f42c1;
-            --blue-main: #3681B6;
-            --gray-50: #f9fafb;
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        .reports-hero {
+            background: linear-gradient(135deg, #0f172a 0%, #0f766e 55%, #2563eb 100%);
+            color: #fff;
         }
 
-        /* ✅ MODAL CORRECTION COMPLÈTE */
-        .modal-backdrop {
-            display: none
+        .reports-panel {
+            border: 0;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
         }
 
-        .modal-content {
-            z-index: 1070 !important;
+        .table thead th {
+            background: #f8fafc;
+            border-bottom: 0;
+            color: #475569;
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
         }
 
-        .modal-xl-custom {
-            max-width: 1200px !important;
-            margin: 1.75rem auto !important;
+        .report-preview-frame {
+            width: 100%;
+            height: 68vh;
+            border: 0;
+            background: #fff;
         }
 
-        .modal-xl-custom .modal-content {
-            border-radius: 24px !important;
-            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.5) !important;
-        }
-
-        /* Toast au-dessus de tout */
-        #liveToast-container {
-            z-index: 1070 !important;
-        }
-
-        /* Styles identiques */
-        .badge-soft {
+        .report-badge {
             border-radius: 999px;
-            padding: 0.35rem 0.7rem;
-            font-size: 0.75rem;
-            font-weight: 500;
+            padding: .38rem .75rem;
+            font-size: .75rem;
+            font-weight: 600;
         }
 
-        .badge-soft-warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .badge-soft-info {
-            background: #e0f2fe;
-            color: #0369a1;
-        }
-
-        .badge-soft-success {
+        .report-badge-success {
             background: #dcfce7;
             color: #166534;
         }
 
-        .badge-soft-muted {
+        .report-badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .report-badge-info {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .report-badge-muted {
             background: #e5e7eb;
             color: #374151;
         }
 
-        .card-neo {
-            border-radius: 1.5rem;
-            border: 0;
-            box-shadow: var(--shadow-xl);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .jury-stack-modal {
+            z-index: 1065;
         }
 
-        .card-neo:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        .jury-stack-backdrop {
+            z-index: 1060;
         }
 
-        .avatar-ring {
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, .2);
-            border: 3px solid white;
-        }
-
-        .btn-modern {
-            border-radius: 12px;
-            padding: 0.5rem 1.25rem;
-            font-weight: 500;
-            border: 2px solid;
-            transition: all 0.2s ease;
-        }
-
-        .btn-purple {
-            background: var(--purple);
-            border-color: var(--purple);
-            color: white;
-        }
-
-        .btn-purple:hover {
-            background: #5d2ea7;
-            border-color: #5d2ea7;
-        }
-
-        .comment-bubble {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-radius: 20px;
-            border-left: 4px solid #3b82f6;
-            padding: 1.25rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .comment-avatar {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            font-weight: 700;
-            font-size: 0.85rem;
-        }
-
-        .version-tag {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 20px;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
     </style>
 
-    {{-- ✅ TOAST Z-INDEX CORRIGÉ --}}
-    <div id="liveToast-container" class="position-fixed top-0 end-0 p-4" style="z-index: 1070 !important;">
-        <div id="liveToast" class="toast border-0 shadow-lg" style="border-radius: 16px;">
-            <div class="toast-body d-flex align-items-center p-3">
-                <i class="fas fa-check-circle me-2 fs-5"></i><span id="toast-message"></span>
-            </div>
-        </div>
-    </div>
-
-    <div class="container-fluid">
-        {{-- Header --}}
-        <div class="row mb-5">
-            <div class="col-12">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                    <div class="d-flex align-items-center">
-                        <div class="bg-gradient-to-br from-purple to-blue-main text-success rounded-3 p-3 shadow-lg me-4"
-                            style="width: 70px; height: 70px;">
-                            <i class="fas fa-file-signature fa-2x"></i>
-                        </div>
-                        <div>
-                            <h1 class="h2 fw-bold mb-2 lh-sm">Tous les rapports</h1>
-                            <div class="d-flex align-items-center gap-3 text-muted small">
-                                <span><i class="fas fa-database me-1"></i>{{ \App\Models\Report::count() }} total</span>
-                                <span class="vr mx-2"></span>
-                                <span>Dernière mise à jour : {{ now()->format('d/m/Y H:i') }}</span>
-                            </div>
-                        </div>
+    <div class="container-fluid py-4">
+        <div class="card reports-hero border-0 shadow-lg rounded-4 overflow-hidden mb-4">
+            <div class="card-body p-4 p-lg-5">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-8">
+                        <span class="badge bg-white bg-opacity-20 text-white px-3 py-2 mb-3">{{ $pageTitle }}</span>
+                        <h1 class="display-6 fw-bold mb-2">Tableau des rapports</h1>
+                        <p class="lead mb-0 opacity-90">Recherche, prévisualisation embarquée, téléchargement et
+                            suppression depuis un seul écran.</p>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Alert success --}}
-        @if (session('success'))
-            <div class="alert alert-success border-0 shadow-lg rounded-3 mb-4" role="alert">
-                <div class="d-flex align-items-center">
-                    <div class="bg-success bg-opacity-20 text-success rounded-circle p-2 me-3">
-                        <i class="fas fa-check fs-5"></i>
-                    </div>
-                    <div>{{ session('success') }}</div>
-                </div>
-            </div>
-        @endif
-
-        @if ($reports->isEmpty())
-            {{-- Empty state --}}
-            <div class="text-center py-8">
-                <div class="card-neo mx-auto" style="max-width: 500px;">
-                    <div class="card-body py-8">
-                        <div class="bg-gray-50 rounded-full p-6 mx-auto mb-4 shadow-lg d-inline-flex"
-                            style="width: 120px; height: 120px;">
-                            <i class="fas fa-file-circle-plus fa-3x text-muted"></i>
-                        </div>
-                        <h3 class="h4 fw-bold text-muted mb-3">Aucun rapport pour le moment</h3>
-                        <p class="text-muted mb-4 lh-lg">Les étudiants n'ont pas encore soumis leurs rapports de stage.
-                        </p>
-                        <a href="{{ route('admin.students.index') }}" class="btn btn-primary btn-modern shadow-lg px-4">
-                            <i class="fas fa-users me-2"></i>Gérer les étudiants
+                    <div class="col-lg-4 text-lg-end">
+                        <a href="{{ route('reports.index') }}" class="btn btn-light btn-lg px-4 py-3 shadow-sm">
+                            <i class="fas fa-sync-alt me-2"></i>Actualiser
                         </a>
                     </div>
                 </div>
             </div>
-        @else
-            {{-- Liste rapports --}}
-            <div class="card-neo">
-                <div class="card-header bg-white border-bottom border-0 rounded-top-4 px-5 py-4">
-                    <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
-                        <span class="bg-primary bg-opacity-10 text-primary rounded-2 p-2">
-                            <i class="fas fa-list-ul"></i>
-                        </span>
-                        Liste des rapports ({{ $reports->count() }})
-                    </h5>
-                </div>
+        </div>
 
-                <div class="card-body p-0 bg-light">
-                    <div class="row g-2 p-2 p-md-2">
-                        @foreach ($reports as $report)
-                            @php
-                                $status = $report->status;
-                                $badgeClass = match ($status) {
-                                    'Soumis' => 'badge-soft-warning',
-                                    'Affecté' => 'badge-soft-info',
-                                    'Validé' => 'badge-soft-success',
-                                    default => 'badge-soft-muted',
-                                };
-                                $statusIcon = match ($status) {
-                                    'Soumis' => 'fas fa-inbox',
-                                    'Affecté' => 'fas fa-user-check',
-                                    'Validé' => 'fas fa-check-circle',
-                                    default => 'far fa-clock',
-                                };
-                            @endphp
+        @if (session('success'))
+        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4">
+            <i class="fas fa-circle-check me-2"></i>{{ session('success') }}
+        </div>
+        @endif
 
-                            <div class="col-xl-4 col-lg-6">
-                                <div class="report-card h-100 card border-0 shadow-lg rounded-3 overflow-hidden" data-report="{{ json_encode($report->load(['versions','student','teacher','comments','juryGroup'])) }}">
-                                    <div class="card-body p-4">
-                                        {{-- Étudiant + Titre --}}
-                                        <div class="d-flex align-items-start mb-4">
-                                            <img src="https://ui-avatars.com/api/?name={{ $report->student?->name ?? 'Student' }}&background=2563EB&color=fff&size=50&rounded=true"
-                                                class="rounded-circle me-3 flex-shrink-0 avatar-ring shadow-sm"
-                                                width="50" height="50">
-                                            <div class="flex-grow-1 min-w-0">
-                                                <h6 class="fw-bold mb-1 lh-sm">{{ $report->student?->name }}</h6>
-                                                <small class="text-muted">{{ $report->student?->email }}</small>
-                                                <div class="mt-2 fw-semibold text-truncate lh-sm"
-                                                    style="font-size: 0.95rem;">
-                                                    {{ Str::limit($report->title, 70) }}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {{-- Badges --}}
-                                        <div class="d-flex flex-wrap gap-2 mb-3">
-                                            <span class="badge {{ $badgeClass }} px-3 py-2">
-                                                <i class="{{ $statusIcon }} me-1"></i>{{ $status }}
-                                            </span>
-                                            @if ($report->file_path)
-                                                <a href="{{ asset('storage/' . $report->file_path) }}" target="_blank"
-                                                    class="badge bg-danger bg-opacity-10 text-danger text-decoration-none px-3 py-2">
-                                                    <i class="fas fa-file-pdf me-1"></i>PDF
-                                                </a>
-                                            @endif
-                                        </div>
-
-                                        {{-- Métadonnées --}}
-                                        <div class="d-flex flex-wrap gap-2 text-muted small mb-4">
-                                            <span><i
-                                                    class="fas fa-calendar me-1"></i>{{ $report->created_at->format('d MMM') }}</span>
-                                            <span class="vr mx-2"></span>
-                                            <span><i
-                                                    class="fas fa-clock me-1"></i>{{ $report->created_at->diffForHumans() }}</span>
-                                        </div>
-
-                                        {{-- Actions principales --}}
-                                        <div class="row g-2 mb-3">
-                                            <div class="col-12">
-                                                @php
-                                                    $adminDeptId = auth()->user()->department_id;
-                                                    $teachersInDept = \App\Models\User::role('teacher')
-                                                        ->where('department_id', $adminDeptId)
-                                                        ->get();
-                                                @endphp
-                                                <select id="teacher_{{ $report->id }}"
-                                                    class="form-select form-select-sm">
-                                                    <option value="">Enseignant</option>
-                                                    @foreach ($teachersInDept as $teacher)
-                                                        <option value="{{ $teacher->id }}"
-                                                            {{ $report->teacher_id == $teacher->id ? 'selected' : '' }}>
-                                                            {{ $teacher->name }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                <button class="btn btn-success btn-sm w-100 mt-1"
-                                                    onclick="assignTeacher({{ $report->id }})">
-                                                    <i class="fas fa-user-plus"></i>
-                                                    {{ $report->teacher_id ? 'Changer' : 'Affecter' }}
-                                                </button>
-                                            </div>
-                                            <div class="col-12">
-                                                <button
-                                                    class="btn bg-success text-light btn-outline-purple btn-sm w-100"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#juryModal{{ $report->id }}"
-                                                    title="Sélectionner le jury">
-                                                    <i class="fas fa-gavel me-2"></i>
-                                                    @if ($report->juryGroup && $report->juryGroup->members->isNotEmpty())
-                                                        <span class="badge bg-purple text-white rounded-pill ms-1">
-                                                            {{ $report->juryGroup?->members->count() ?? 0 }}/4
-                                                        </span>
-                                                        {{ $report->juryPresident?->name ?? 'Jury' }}
-                                                    @else
-                                                        Affecter jury
-                                                    @endif
-                                                </button>
-                                                @if ($report->juryGroup && $report->juryGroup->members->isNotEmpty())
-                                                    <div class="mt-1 small text-muted">
-                                                        <i
-                                                            class="fas fa-users me-1"></i>{{ $report->juryGroup?->members->count() ?? 0 }}
-                                                        membre(s)
-                                                        @if ($report->juryPresident?->name)
-                                                            <br><small class="text-primary">👑
-                                                                {{ $report->juryPresident->name }}</small>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
-
-                                        {{-- ✅ BOUTON COMMENTAIRES --}}
-                                        <hr class="my-3">
-                                            <div class="text-center">
-                                                <button class="btn btn-outline-primary btn-modern w-100 btn-open-report"
-                                                    data-report-id="{{ $report->id }}">
-                                                    <i class="fas fa-eye me-2"></i>
-                                                    Voir le rapport
-                                                </button>
-                                            </div>
-                                    </div>
-                                </div>
-
-                                {{-- ✅ MODAL COMMENTAIRES (CORRIGÉE) --}}
-                                <div class="modal fade" id="commentsModal{{ $report->id }}" tabindex="-1"
-                                    aria-hidden="true">
-                                    <div
-                                        class="modal-dialog modal-xl-custom modal-dialog-centered modal-dialog-scrollable">
-                                        <div class="modal-content">
-                                            <div
-                                                class="modal-header bg-gradient-to-r from-primary to-info border-0 text-white rounded-top-4">
-                                                <div class="d-flex align-items-center gap-3">
-                                                    <div class="bg-white bg-opacity-20 p-2 rounded-3">
-                                                        <i class="fas fa-comments fa-lg"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h5 class="modal-title mb-1 fw-bold">Commentaires du rapport
-                                                        </h5>
-                                                        <small>{{ Str::limit($report->title, 80) }}</small>
-                                                    </div>
-                                                </div>
-                                                <button type="button" class="btn-close btn-close-white"
-                                                    data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-
-                                            <div class="modal-body p-0">
-                                                {{-- Sidebar infos --}}
-                                                <div class="bg-light border-bottom p-4">
-                                                    <div class="row align-items-center">
-                                                        <div class="col-md-6">
-                                                            <strong>{{ $report->student?->name }}</strong>
-                                                            <div class="text-muted small">
-                                                                {{ $report->student?->email }}</div>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <span class="badge {{ $badgeClass }} px-3 py-2">
-                                                                <i
-                                                                    class="{{ $statusIcon }} me-1"></i>{{ $status }}
-                                                            </span>
-                                                        </div>
-                                                        <div class="col-md-3 text-end">
-                                                            <span
-                                                                class="version-tag">{{ $report->version ?? 'v1' }}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {{-- Liste commentaires --}}
-                                                <div class="p-4" style="max-height: 500px; overflow-y: auto;">
-                                                    @forelse($report->comments as $comment)
-                                                        <div class="comment-bubble">
-                                                            <div class="d-flex align-items-start gap-3 mb-3">
-                                                                <img src="https://ui-avatars.com/api/?name={{ $comment->user?->name ?? 'User' }}&background=3b82f6&color=fff&size=42"
-                                                                    class="comment-avatar flex-shrink-0"
-                                                                    alt="Avatar">
-                                                                <div class="flex-grow-1">
-                                                                    <div
-                                                                        class="d-flex align-items-center justify-content-between mb-1">
-                                                                        <strong
-                                                                            class="text-dark">{{ $comment->user?->name ?? 'Utilisateur' }}</strong>
-                                                                        <small
-                                                                            class="text-muted">{{ $comment->created_at->format('d/m H:i') }}</small>
-                                                                    </div>
-                                                                    <div class="text-muted small lh-sm">
-                                                                        {{ $comment->comment }}</div>
-                                                                </div>
-                                                            </div>
-                                                            @if ($comment->file_path)
-                                                                <div class="ms-5 p-2 bg-white rounded-2 shadow-sm">
-                                                                    <a href="{{ asset('storage/' . $comment->file_path) }}"
-                                                                        target="_blank" class="text-decoration-none">
-                                                                        <i
-                                                                            class="fas fa-paperclip me-1 text-muted"></i>Fichier
-                                                                        joint
-                                                                    </a>
-                                                                </div>
-                                                            @endif
-                                                        </div>
-                                                    @empty
-                                                        <div class="text-center py-6 text-muted">
-                                                            <i class="fas fa-comment-slash fa-2x mb-3 opacity-50"></i>
-                                                            <p>Aucun commentaire pour ce rapport</p>
-                                                        </div>
-                                                    @endforelse
-                                                </div>
-                                            </div>
-
-                                            <div class="modal-footer bg-light border-0 rounded-bottom-4 px-4 py-3">
-                                                <button type="button" class="btn btn-outline-secondary"
-                                                    data-bs-dismiss="modal">
-                                                    <i class="fas fa-times me-1"></i>Fermer
-                                                </button>
-                                                <button type="button" class="btn btn-primary"
-                                                    onclick="addComment({{ $report->id }})">
-                                                    <i class="fas fa-reply me-1"></i>Ajouter commentaire
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {{-- ⭐ MODAL SÉLECTION JURY --}}
-                                <div class="modal fade" id="juryModal{{ $report->id }}" tabindex="-1">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content rounded-4">
-
-                                            <div class="modal-header bg-primary text-white">
-                                                <h5 class="modal-title">⚖️ Constitution du jury</h5>
-                                                <button class="btn-close btn-close-white"
-                                                    data-bs-dismiss="modal"></button>
-                                            </div>
-
-                                            <div class="modal-body">
-
-                                                {{-- ⚠️ CONDITION --}}
-                                                @if ($report->status !== 'Validé')
-                                                    <div class="alert alert-warning">
-                                                        Jury assignable uniquement après validation du rapport.
-                                                    </div>
-                                                @else
-                                                    {{-- ENCADREUR --}}
-                                                    <div class="mb-3">
-                                                        <label class="fw-bold">Encadreur</label>
-                                                        <select class="form-select" disabled>
-                                                            <option selected>
-                                                                {{ $report->teacher->name ?? 'Non défini' }}
-                                                            </option>
-                                                        </select>
-                                                    </div>
-
-                                                    {{-- PRESIDENT --}}
-                                                    <div class="mb-3">
-                                                        <label class="fw-bold">Président du jury</label>
-                                                        <select id="president_{{ $report->id }}"
-                                                            class="form-select">
-                                                            <option value="">-- Choisir --</option>
-                                                            @foreach ($teachers as $teacher)
-                                                                <option value="{{ $teacher->id }}">
-                                                                    {{ $teacher->name }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-
-                                                    {{-- RAPPORTEUR --}}
-                                                    <div class="mb-3">
-                                                        <label class="fw-bold">Rapporteur</label>
-                                                        <select id="rapporteur_{{ $report->id }}"
-                                                            class="form-select">
-                                                            <option value="">-- Choisir --</option>
-                                                            @foreach ($teachers as $teacher)
-                                                                <option value="{{ $teacher->id }}">
-                                                                    {{ $teacher->name }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-
-                                                    {{-- AJOUT JURY --}}
-                                                    <div class="mt-4 border-top pt-3">
-                                                        <h6>➕ Ajouter un membre externe</h6>
-
-                                                        <input type="text" id="new_name_{{ $report->id }}"
-                                                            class="form-control mb-2" placeholder="Nom complet">
-
-                                                        <select id="new_role_{{ $report->id }}"
-                                                            class="form-select mb-2">
-                                                            <option value="president">Président</option>
-                                                            <option value="rapporteur">Rapporteur</option>
-                                                        </select>
-
-                                                        <button class="btn btn-outline-primary w-100"
-                                                            onclick="addJuryMember({{ $report->id }})">
-                                                            Ajouter comme jury
-                                                        </button>
-                                                    </div>
-                                                @endif
-                                            </div>
-
-                                            <div class="modal-footer">
-                                                <button class="btn btn-secondary"
-                                                    data-bs-dismiss="modal">Annuler</button>
-
-                                                <button class="btn btn-success btn-validate-jury"
-                                                    data-report-id="{{ $report->id }}">
-                                                <button class="btn btn-success btn-validate-jury"
-                                                    data-report-id="{{ $report->id }}">
-                                                    ✅ Valider le jury
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-                        @endforeach
+        <div class="card reports-panel mb-4">
+            <div class="card-body p-4">
+                <form method="GET" action="{{ route('reports.index') }}" class="row g-3 align-items-end">
+                    <div class="col-lg-8">
+                        <label class="form-label fw-semibold text-muted">Recherche</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                            <input type="search" name="search" value="{{ $searchValue }}" class="form-control" placeholder="Titre, étudiant, matricule, enseignant...">
+                        </div>
                     </div>
+                    <div class="col-lg-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg flex-grow-1" data-loader-target="#globalLoader">
+                            <i class="fas fa-filter me-2"></i>Filtrer
+                        </button>
+                        <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary btn-lg" data-loader-target="#globalLoader">
+                            <i class="fas fa-eraser"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @if ($reports->isEmpty())
+        <div class="card reports-panel">
+            <div class="card-body py-5 text-center">
+                <i class="fas fa-file-circle-question fa-3x text-muted mb-3"></i>
+                <h3 class="h5 fw-bold mb-2">Aucun rapport trouvé</h3>
+                <p class="text-muted mb-0">Ajustez votre recherche ou attendez les prochaines soumissions.</p>
+            </div>
+        </div>
+        @else
+        <div class="card reports-panel overflow-hidden">
+            <div class="card-header bg-white border-0 py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <h2 class="h5 fw-bold mb-1">Rapports</h2>
+                    <div class="text-muted small">{{ $reports->total() }} résultat(s) • page {{ $reports->currentPage()
+                            }} / {{ $reports->lastPage() }}</div>
                 </div>
+                <span class="report-badge report-badge-muted">Dernière mise à jour {{ now()->format('d/m/Y H:i')
+                        }}</span>
             </div>
 
-            {{-- Pagination --}}
-            @if (method_exists($reports, 'links'))
-                <div class="mt-5">{{ $reports->links('pagination::bootstrap-5') }}</div>
-            @endif
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">#</th>
+                            <th>Étudiant</th>
+                            <th>Titre</th>
+                            <th>Statut</th>
+                            <th>Encadreur</th>
+                            <th>Jury</th>
+                            <th>Date</th>
+                            <th class="text-end" style="width: 190px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($reports as $report)
+                        @php
+                        $status = $report->status;
+                        $statusClass = match ($status) {
+                        'Validé final' => 'report-badge-success',
+                        'Validé', 'En attente jury' => 'report-badge-info',
+                        'Soumis', 'Affecté', 'commenté' => 'report-badge-warning',
+                        default => 'report-badge-muted',
+                        };
+                        $reportPayload = $report->loadMissing([
+                        'student.filiere',
+                        'teacher',
+                        'latestVersion',
+                        'comments.user',
+                        'juryGroup.members'
+                        ]);
+                        $reportPayloadData = base64_encode(json_encode($reportPayload));
+                        $reportPreviewUrl = route('reports.preview', $report);
+                        $reportDownloadUrl = route('reports.download', $report);
+                        @endphp
+                        <tr>
+                            <td class="fw-semibold">{{ $report->id }}</td>
+                            <td>
+                                <div class="fw-semibold">{{ $report->student?->name ?? '-' }}</div>
+                                <div class="text-muted small">{{ $report->student?->matricule ??
+                                $report->student?->email ?? '-' }}</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ \Illuminate\Support\Str::limit($report->title, 50) }}</div>
+                                <div class="text-muted small">{{ $report->comments_count ?? $report->comments->count()
+                                                        }} commentaire(s)</div>
+                            </td>
+                            <td><span class="report-badge {{ $statusClass }}">{{ $status }}</span></td>
+                            <td>{{ $report->teacher?->name ?? 'Non affecté' }}</td>
+                            <td>
+                                @if ($report->juryGroup?->members?->count())
+                                <span class="report-badge report-badge-info">{{ $report->juryGroup->members->count() }}
+                                    membre(s)</span>
+                                @else
+                                <span class="report-badge report-badge-muted">Aucun</span>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ $report->created_at->format('d/m/Y') }}</div>
+                                <div class="text-muted small">{{ $report->created_at->diffForHumans() }}</div>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm px-3" data-report="{{ $reportPayloadData }}" data-preview-url="{{ $reportPreviewUrl }}" data-download-url="{{ $reportDownloadUrl }}" onclick="openReportDetails(this)">
+                                        <i class="fas fa-eye me-1"></i>Voir
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm px-3" data-confirm-title="Suppression du rapport" data-confirm-message="Confirmez-vous la suppression de ce rapport ?" data-confirm-submit-label="Oui, supprimer" data-confirm-form-id="deleteReportForm{{ $report->id }}">
+                                        <i class="fas fa-trash me-1"></i>Suppr.
+                                    </button>
+                                </div>
+
+                                <form id="deleteReportForm{{ $report->id }}" method="POST" action="{{ route('reports.destroy', $report) }}" class="d-none">
+                                    @csrf
+                                    @method('DELETE')
+                                </form>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            {{ $reports->links('pagination::bootstrap-5') }}
+        </div>
         @endif
     </div>
 
-    {{-- ✅ JS COMPLÈT --}}
-    <script>
-        document.querySelectorAll('.btn-validate-jury').forEach(btn => {
-            btn.addEventListener('click', function() {
-                console.log('click jury', this.dataset.reportId);
-                const reportId = this.dataset.reportId;
-                submitJury(reportId);
-            });
-
-        });
-
-        document.querySelectorAll('.btn-validate-jury').forEach(btn => {
-            btn.addEventListener('click', function() {
-                console.log('click jury', this.dataset.reportId);
-                const reportId = this.dataset.reportId;
-                submitJury(reportId);
-            });
-
-        });
-
-        function showToast(message, type = 'success') {
-            const toast = new bootstrap.Toast(document.getElementById('liveToast'));
-            document.getElementById('toast-message').innerHTML =
-                `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>${message}`;
-            document.getElementById('liveToast').className =
-                `toast border-0 shadow-lg bg-${type === 'success' ? 'success' : 'danger'} text-white`;
-            toast.show();
-        }
-
-        function submitJury(reportId) {
-            const president = document.getElementById(`president_${reportId}`).value;
-            const rapporteur = document.getElementById(`rapporteur_${reportId}`).value;
-
-            if (!president || !rapporteur) {
-                return showToast("Veuillez sélectionner président et rapporteur", "danger");
-            }
-
-            fetch(`{{ url('/reports')}}/${reportId}/assign-jury`, {
-            fetch(`{{ url('/reports')}}/${reportId}/assign-jury`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        president_id: president,
-                        rapporteur_id: rapporteur
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast(data.message || "Jury assigné avec succès");
-                        showToast(data.message || "Jury assigné avec succès");
-                        location.reload();
-                    } else {
-                        showToast(data.message || "Erreur", "danger");
-                    } else {
-                        showToast(data.message || "Erreur", "danger");
-                    }
-                })
-                .catch(() => showToast('Erreur réseau', 'danger'));
-                })
-                .catch(() => showToast('Erreur réseau', 'danger'));
-        }
-
-
-
-
-
-        function assignTeacher(reportId) {
-            const teacherId = document.getElementById(`teacher_${reportId}`).value;
-            if (!teacherId) return showToast('Veuillez sélectionner un enseignant', 'danger');
-
-            fetch(`{{ url('/reports') }}/${reportId}/assign`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        teacher_id: teacherId
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast(data.message);
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        showToast(data.message || 'Erreur', 'danger');
-                    }
-                })
-                .catch(() => showToast('Erreur réseau', 'danger'));
-        }
-
-        function addJuryMember(reportId) {
-
-            const name = document.getElementById(`new_name_${reportId}`).value;
-            const role = document.getElementById(`new_role_${reportId}`).value;
-
-            fetch(`/reports/add-jury-member`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name,
-                        role
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    showToast("Membre ajouté");
-                    location.reload();
-                });
-        }
-
-        function addComment(reportId) {
-            showToast('Fonctionnalité en développement', 'info');
-        }
-
-        // Limite select multiple à 4
-        document.querySelectorAll('select[multiple][data-max]').forEach(select => {
-            select.addEventListener('change', function() {
-                if (this.selectedOptions.length > this.dataset.max) {
-                    Array.from(this.selectedOptions)
-                        .slice(this.dataset.max)
-                        .forEach(option => option.selected = false);
-                    showToast(`Maximum ${this.dataset.max} membres`, 'warning');
-                }
-            });
-        });
-
-        // ⭐ JURY MODAL FUNCTIONS
-        // Variable définie dynamiquement dans les modals correspondants, pas de valeur globale nécessaire ici.
-
-        function filterJury(reportId) {
-            const dept = document.getElementById(`jury_dept_${reportId}`).value;
-            const filiere = document.getElementById(`jury_filiere_${reportId}`).value;
-            const search = document.getElementById(`jury_search_${reportId}`).value.toLowerCase();
-            const showAll = document.getElementById(`jury_show_all_${reportId}`).checked;
-
-            document.querySelectorAll(`#juryTable${reportId} tbody tr`).forEach(row => {
-                const name = row.dataset.name;
-                const deptId = row.dataset.dept;
-                const filiereId = row.dataset.filiere;
-
-                const matchesDept = !dept || deptId == dept;
-                const matchesFiliere = !filiere || filiereId == filiere;
-                const matchesSearch = !search || name.includes(search);
-                const matchesRole = showAll || row.querySelector('.badge.bg-info');
-
-                row.style.display = (matchesDept && matchesFiliere && matchesSearch && matchesRole) ? '' : 'none';
-            });
-            updateJuryCount(reportId);
-        }
-
-        function toggleSelectAll(reportId) {
-            const selectAll = document.getElementById(`selectAll_${reportId}`).checked;
-            document.querySelectorAll(`#juryModal${reportId} .jury-checkbox`).forEach(cb => {
-                if (selectAll && document.querySelectorAll(`#juryModal${reportId} .jury-checkbox:checked`).length <
-                    4) {
-                    cb.checked = true;
-                } else {
-                    cb.checked = false;
-                }
-            });
-            updateJuryCount(reportId);
-        }
-
-        function updateJuryCount(reportId) {
-            const count = document.querySelectorAll(`#juryModal${reportId} .jury-checkbox:checked`).length;
-            document.getElementById(`selectedCount_${reportId}`).textContent = count;
-            document.getElementById(`confirmBtn_${reportId}`).disabled = count === 0 || count > 4;
-        }
-
-        function confirmJury(reportId) {
-            const juryIds = Array.from(document.querySelectorAll(`#juryModal${reportId} .jury-checkbox:checked`)).map(cb =>
-                cb.value);
-
-            if (juryIds.length > 4) {
-                showToast('Maximum 4 membres du jury', 'danger');
-                return;
-            }
-
-            fetch(`{{ url('/reports') }}/${reportId}/assign-jury`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        jury_ids: juryIds
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast(data.message);
-                        bootstrap.Modal.getInstance(document.getElementById(`juryModal${reportId}`)).hide();
-                        setTimeout(() => location.reload(), 1000);
-                    } else {
-                        showToast(data.message || 'Erreur', 'danger');
-                    }
-                })
-                .catch(() => showToast('Erreur réseau', 'danger'));
-        }
-
-        // Event listeners pour chaque modal jury
-        document.querySelectorAll('[id^="juryModal"]').forEach(modal => {
-            const reportId = modal.id.match(/juryModal(\d+)/)[1];
-
-            // Filtres
-            document.getElementById(`jury_dept_${reportId}`)?.addEventListener('change', () => filterJury(
-                reportId));
-            document.getElementById(`jury_search_${reportId}`)?.addEventListener('keyup', () => filterJury(
-                reportId));
-            document.getElementById(`jury_show_all_${reportId}`)?.addEventListener('change', () => filterJury(
-                reportId));
-
-            // Checkboxes
-            modal.querySelectorAll('.jury-checkbox').forEach(cb => {
-                cb.addEventListener('change', () => {
-                    if (document.querySelectorAll(`#juryModal${reportId} .jury-checkbox:checked`)
-                        .length > 4) {
-                        cb.checked = false;
-                        showToast('Maximum 4 membres', 'warning');
-                    }
-                    updateJuryCount(reportId);
-                });
-            });
-        });
-
-        // OUVERTURE D'UN MODAL DE DÉTAIL GLOBAL
-        const detailModalHtml = `
-        <div class="modal fade" id="reportDetailModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                <div class="modal-content rounded-4">
-                    <div class="modal-header bg-gradient-to-r from-primary to-info text-white">
-                        <h5 class="modal-title">Détails du rapport</h5>
-                        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="modal fade" id="reportDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+                <div class="modal-header bg-dark text-white border-0">
+                    <div>
+                        <h5 class="modal-title mb-0" id="reportDetailsTitle">Détails du rapport</h5>
+                        <small class="text-white-50">Prévisualisation et téléchargement dans l'application</small>
                     </div>
-                    <div class="modal-body">
-                        <div id="reportDetailContent">Chargement...</div>
-                    </div>
-                    <div class="modal-footer bg-light border-0 rounded-bottom-4">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="row g-0">
+                        <div class="col-lg-8 border-end">
+                            <div class="p-4 border-bottom bg-light">
+                                <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                                    <span id="reportDetailsStatus" class="report-badge report-badge-muted">Statut</span>
+                                    <span id="reportDetailsVersion" class="report-badge report-badge-info">v1</span>
+                                </div>
+                                <h5 class="fw-bold mb-2" id="reportDetailsTitleText">Rapport</h5>
+                                <div class="text-muted small" id="reportDetailsMeta">Chargement...</div>
+                            </div>
+                            <div id="reportDetailsPreviewWrap" class="p-3">
+                                <iframe id="reportDetailsPreview" class="report-preview-frame" src=""></iframe>
+                                <div id="reportDetailsPreviewFallback" class="alert alert-light border d-none mb-0">
+                                    L'aperçu direct est disponible pour les PDF uniquement. Utilisez le téléchargement
+                                    si le fichier est dans un autre format.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="p-4">
+                                <div class="d-grid gap-2 mb-4">
+                                    <a id="reportDetailsDownload" href="#" target="_blank" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-download me-2"></i>Télécharger
+                                    </a>
+                                    <button type="button" class="btn btn-success btn-lg" onclick="openJuryAssignmentFromDetails()">
+                                        <i class="fas fa-gavel me-2"></i>Affecter jury
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+                                        Fermer
+                                    </button>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">Informations</h6>
+                                    <div class="small text-muted mb-2">Étudiant</div>
+                                    <div class="fw-semibold mb-3" id="reportDetailsStudent">-</div>
+
+                                    <div class="small text-muted mb-2">Matricule / Email</div>
+                                    <div class="fw-semibold mb-3" id="reportDetailsStudentMeta">-</div>
+
+                                    <div class="small text-muted mb-2">Filière</div>
+                                    <div class="fw-semibold mb-3" id="reportDetailsFiliere">-</div>
+
+                                    <div class="small text-muted mb-2">Encadreur</div>
+                                    <div class="fw-semibold mb-3" id="reportDetailsTeacher">-</div>
+
+                                    <div class="small text-muted mb-2">Jury</div>
+                                    <div class="fw-semibold mb-3" id="reportDetailsJury">-</div>
+                                    <div id="reportDetailsJuryMembers" class="d-flex flex-wrap gap-2"></div>
+                                </div>
+
+                                @if ($isAdmin)
+                                <div class="border-top pt-4">
+                                    <h6 class="fw-bold mb-3">Affecter / modifier l'encadreur</h6>
+                                    <select id="reportTeacherSelect" class="form-select mb-2">
+                                        <option value="">Choisir un enseignant</option>
+                                        @foreach ($availableTeachers as $teacher)
+                                        <option value="{{ $teacher->id }}">{{ $teacher->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" class="btn btn-success w-100" onclick="assignTeacherFromDetails()">
+                                        <i class="fas fa-user-check me-2"></i>Affecter
+                                    </button>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>`;
+        </div>
+    </div>
 
-        // Append modal once
-        if (!document.getElementById('reportDetailModal')) {
-            document.body.insertAdjacentHTML('beforeend', detailModalHtml);
+    @if ($isAdmin)
+    <div class="modal fade" id="juryAssignmentModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+                <div class="modal-header bg-dark text-white border-0">
+                    <div>
+                        <h5 class="modal-title mb-0">Affectation du jury</h5>
+                        <small class="text-white-50">Président, rapporteur et membres du département</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info border-0 mb-4">
+                        <strong>Encadreur courant :</strong> <span id="juryAssignmentSupervisor">-</span>
+                    </div>
+
+                    <form id="juryAssignmentForm" method="POST" action="{{ route('reports.assign-jury', ['report' => 0]) }}" class="row g-3">
+                        @csrf
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Président</label>
+                            <select id="juryPresidentSelect" name="president_id" class="form-select" required>
+                                <option value="">Choisir un enseignant</option>
+                                @foreach ($availableTeachers as $teacher)
+                                <option value="{{ $teacher->id }}">{{ $teacher->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Rapporteur</label>
+                            <select id="juryRapporteurSelect" name="rapporteur_id" class="form-select" required>
+                                <option value="">Choisir un enseignant</option>
+                                @foreach ($availableTeachers as $teacher)
+                                <option value="{{ $teacher->id }}">{{ $teacher->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Membre supplémentaire 1</label>
+                            <select id="juryMemberSelect1" class="form-select">
+                                <option value="">Aucun</option>
+                                @foreach ($availableTeachers as $teacher)
+                                <option value="{{ $teacher->id }}">{{ $teacher->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Membre supplémentaire 2</label>
+                            <select id="juryMemberSelect2" class="form-select">
+                                <option value="">Aucun</option>
+                                @foreach ($availableTeachers as $teacher)
+                                <option value="{{ $teacher->id }}">{{ $teacher->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="alert alert-warning border-0 mb-0">
+                                L'encadreur du rapport sera automatiquement ajouté au jury avec le poste d'encadreur.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="button" class="btn btn-success" onclick="submitJuryAssignment()">
+                        <i class="fas fa-save me-2"></i>Sauvegarder le jury
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <script>
+        let currentReportId = null;
+        let currentReportData = null;
+
+        window.openReportDetails = function(button) {
+            let report;
+            const rawPayload = button.dataset.report || '';
+
+            try {
+                const decodedPayload = rawPayload.startsWith('ey') ? atob(rawPayload) : rawPayload;
+                report = JSON.parse(decodedPayload);
+            } catch (error) {
+                console.error('Impossible de parser les données du rapport :', error);
+                return;
+            }
+
+            currentReportId = report.id;
+            currentReportData = report;
+
+            const latestVersion = report.latest_version || {};
+            const student = report.student || {};
+            const filiere = student.filiere || {};
+            const teacher = report.teacher || {};
+            const juryMembers = report.juryGroup && Array.isArray(report.juryGroup.members) ? report.juryGroup.members : [];
+
+            const previewFile = latestVersion.file_path || report.file_path || '';
+            const previewUrl = button.dataset.previewUrl || '';
+            const downloadUrl = button.dataset.downloadUrl || previewUrl;
+            const previewable = previewFile && previewFile.toLowerCase().endsWith('.pdf');
+
+            const status = report.status || 'N/A';
+            let statusClass = 'report-badge-muted';
+
+            if (status === 'Validé final') {
+                statusClass = 'report-badge-success';
+            } else if (['Validé', 'En attente jury'].includes(status)) {
+                statusClass = 'report-badge-info';
+            } else if (['Soumis', 'Affecté', 'commenté'].includes(status)) {
+                statusClass = 'report-badge-warning';
+            }
+
+            document.getElementById('reportDetailsTitle').textContent = `Rapport #${report.id}`;
+            document.getElementById('reportDetailsTitleText').textContent = report.title || 'Rapport';
+
+            const statusBadge = document.getElementById('reportDetailsStatus');
+            statusBadge.className = `report-badge ${statusClass}`;
+            statusBadge.textContent = status;
+
+            document.getElementById('reportDetailsVersion').textContent = latestVersion.version || 'v1';
+            document.getElementById('reportDetailsMeta').textContent = `Créé le ${new Date(report.created_at).toLocaleString()} • Mis à jour le ${new Date(report.updated_at).toLocaleString()}`;
+            document.getElementById('reportDetailsStudent').textContent = student.name || '-';
+            document.getElementById('reportDetailsStudentMeta').textContent = student.matricule || student.email || '-';
+            document.getElementById('reportDetailsFiliere').textContent = filiere.name || '-';
+            document.getElementById('reportDetailsTeacher').textContent = teacher.name || 'Non affecté';
+            document.getElementById('reportDetailsJury').textContent = juryMembers.length ? `${juryMembers.length} membre(s)` : 'Aucun';
+
+            const juryMembersWrap = document.getElementById('reportDetailsJuryMembers');
+            if (juryMembersWrap) {
+                juryMembersWrap.innerHTML = juryMembers.length ?
+                    juryMembers.map((member) => {
+                        const role = member.pivot.role || 'membre';
+                        return `<span class="badge bg-light text-dark border">${member.name} • ${role}</span>`;
+                    }).join('') :
+                    '<span class="text-muted small">Aucun membre affecté</span>';
+            }
+
+            const previewFrame = document.getElementById('reportDetailsPreview');
+            const previewFallback = document.getElementById('reportDetailsPreviewFallback');
+            const downloadLink = document.getElementById('reportDetailsDownload');
+
+            if (previewable && previewUrl) {
+                previewFrame.classList.remove('d-none');
+                previewFallback.classList.add('d-none');
+                previewFrame.src = previewUrl;
+            } else {
+                previewFrame.src = '';
+                previewFrame.classList.add('d-none');
+                previewFallback.classList.remove('d-none');
+            }
+
+            downloadLink.href = downloadUrl || '#';
+
+            const teacherSelect = document.getElementById('reportTeacherSelect');
+            if (teacherSelect) {
+                teacherSelect.value = teacher.id || '';
+            }
+
+            const modalEl = document.getElementById('reportDetailsModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                previewFrame.src = '';
+                currentReportId = null;
+            }, {
+                once: true
+            });
+        };
+
+        window.assignTeacherFromDetails = function() {
+            const teacherSelect = document.getElementById('reportTeacherSelect');
+            const teacherId = teacherSelect ? teacherSelect.value : '';
+
+            if (!currentReportId || !teacherId) {
+                return;
+            }
+
+            fetch(`{{ url('/reports') }}/${currentReportId}/assign`, {
+                    method: 'POST'
+                    , headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        , 'Content-Type': 'application/json'
+                        , 'Accept': 'application/json'
+                    }
+                    , body: JSON.stringify({
+                        teacher_id: teacherId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    }
+                });
+        };
+
+        window.openJuryAssignmentFromDetails = function() {
+            if (!currentReportData) {
+                return;
+            }
+
+            const supervisor = document.getElementById('juryAssignmentSupervisor');
+            const form = document.getElementById('juryAssignmentForm');
+            const presidentSelect = document.getElementById('juryPresidentSelect');
+            const rapporteurSelect = document.getElementById('juryRapporteurSelect');
+            const memberSelect1 = document.getElementById('juryMemberSelect1');
+            const memberSelect2 = document.getElementById('juryMemberSelect2');
+            const reportTeacher = currentReportData.teacher || {};
+            const juryMembers = currentReportData.juryGroup && Array.isArray(currentReportData.juryGroup.members) ? currentReportData.juryGroup.members : [];
+
+            supervisor.textContent = reportTeacher.name || 'Non affecté';
+            form.action = `{{ url('/reports') }}/${currentReportData.id}/assign-jury`;
+
+            const selectedPresidents = juryMembers.find(member => (member.pivot && member.pivot.role) === 'president');
+            const selectedRapporteurs = juryMembers.find(member => (member.pivot && member.pivot.role) === 'rapporteur');
+            const extraMembers = juryMembers.filter(member => {
+                const role = member.pivot ? member.pivot.role : '';
+                return !['president', 'rapporteur', 'encadreur'].includes(role);
+            });
+
+            presidentSelect.value = selectedPresidents ? selectedPresidents.id : '';
+            rapporteurSelect.value = selectedRapporteurs ? selectedRapporteurs.id : '';
+            memberSelect1.value = extraMembers[0] ? extraMembers[0].id : '';
+            memberSelect2.value = extraMembers[1] ? extraMembers[1].id : '';
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('juryAssignmentModal')).show();
+        };
+
+        window.submitJuryAssignment = function() {
+            if (!currentReportData) {
+                return;
+            }
+
+            const form = document.getElementById('juryAssignmentForm');
+            const memberSelect1 = document.getElementById('juryMemberSelect1');
+            const memberSelect2 = document.getElementById('juryMemberSelect2');
+            const presidentSelect = document.getElementById('juryPresidentSelect');
+            const rapporteurSelect = document.getElementById('juryRapporteurSelect');
+
+            const memberIds = [memberSelect1 ? memberSelect1.value : '', memberSelect2 ? memberSelect2.value : ''].filter(Boolean);
+
+            fetch(`{{ url('/reports') }}/${currentReportData.id}/assign-jury`, {
+                    method: 'POST'
+                    , headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        , 'Content-Type': 'application/json'
+                        , 'Accept': 'application/json'
+                    }
+                    , body: JSON.stringify({
+                        president_id: presidentSelect ? presidentSelect.value : ''
+                        , rapporteur_id: rapporteurSelect ? rapporteurSelect.value : ''
+                        , member_ids: memberIds
+                    })
+                })
+                .then(response => response.json().then(data => ({
+                    ok: response.ok
+                    , data
+                })))
+                .then(({
+                    ok
+                    , data
+                }) => {
+                    if (ok && data.success) {
+                        location.reload();
+                        return;
+                    }
+
+                    alert(data.message || 'Impossible de sauvegarder le jury.');
+                })
+                .catch(() => {
+                    alert('Une erreur est survenue lors de la sauvegarde du jury.');
+                });
+        };
+
+        const juryAssignmentModal = document.getElementById('juryAssignmentModal');
+        if (juryAssignmentModal) {
+            juryAssignmentModal.addEventListener('show.bs.modal', () => {
+                juryAssignmentModal.classList.add('jury-stack-modal');
+                setTimeout(() => {
+                    const backdrop = document.querySelector('.modal-backdrop:last-of-type');
+                    if (backdrop) {
+                        backdrop.classList.add('jury-stack-backdrop');
+                    }
+                }, 0);
+            });
+
+            juryAssignmentModal.addEventListener('hidden.bs.modal', () => {
+                juryAssignmentModal.classList.remove('jury-stack-modal');
+            });
         }
 
-        document.querySelectorAll('.btn-open-report').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const card = this.closest('.report-card');
-                const data = card ? card.dataset.report : null;
-                if (!data) return;
-                const report = JSON.parse(data);
-
-                // Build content
-                let html = `
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h5 class="fw-bold">${report.title || 'Rapport'}</h5>
-                            <p class="text-muted mb-2">Auteur: ${report.student?.name || 'N/A'} — ${report.student?.email || ''}</p>
-                            <p class="small text-muted">Statut: <strong>${report.status || 'N/A'}</strong></p>
-                            <hr>
-                            <h6>Versions & Documents</h6>
-                            <div class="list-group mb-3">
-                `;
-
-                // fichier principal
-                if (report.file_path) {
-                    html += `<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="${window.location.origin}/storage/${report.file_path}" target="_blank">Fichier soumis (original)<span class="badge bg-danger">Télécharger</span></a>`;
-                }
-
-                // versions
-                if (report.versions && report.versions.length) {
-                    report.versions.forEach(v => {
-                        html += `<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="${window.location.origin}/storage/${v.file_path}" target="_blank">${v.version || 'version'} — ${new Date(v.created_at).toLocaleString()}<span class="badge bg-secondary">Télécharger</span></a>`;
-                    });
-                } else {
-                    html += `<div class="list-group-item text-muted">Aucune version supplémentaire</div>`;
-                }
-
-                html += `</div></div>`;
-
-                // right column: metadata + actions
-                html += `<div class="col-md-4">`;
-                html += `<h6>Meta</h6><ul class="list-unstyled small text-muted">`;
-                html += `<li>Soumis le: ${new Date(report.created_at).toLocaleString()}</li>`;
-                html += `<li>Dernière mise à jour: ${new Date(report.updated_at).toLocaleString()}</li>`;
-                if (report.teacher) html += `<li>Encadreur: ${report.teacher.name}</li>`;
-                if (report.juryGroup && report.juryGroup.members) html += `<li>Jury: ${report.juryGroup.members.length} membre(s)</li>`;
-                html += `</ul>`;
-                html += `<div class="mt-3">`;
-                if (report.file_path) html += `<a href="${window.location.origin}/storage/${report.file_path}" target="_blank" class="btn btn-primary w-100 mb-2">Télécharger fichier</a>`;
-                html += `</div></div>`;
-
-                html += `</div>`;
-
-                document.getElementById('reportDetailContent').innerHTML = html;
-                const modalEl = document.getElementById('reportDetailModal');
-                const bsModal = new bootstrap.Modal(modalEl);
-                bsModal.show();
-            });
-        });
     </script>
 </x-app-layout>

@@ -75,7 +75,7 @@
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold text-muted text-uppercase">&nbsp;</label>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-success flex-grow-1 " data-loader-target="#globalLoader">
+                            <button type="submit" class="btn btn-success flex-grow-1" data-loader-target="#globalLoader">
                                 <i class="fas fa-filter me-1"></i> Filtrer
                             </button>
                             <a href="{{ route('admin.students.index') }}" class="btn btn-outline-secondary" data-loader-target="#globalLoader">
@@ -160,7 +160,7 @@
                             <div class="modal-dialog">
                                 <div class="modal-content">
 
-                                    <form action="{{ url ('admin/students/'.$student->id) }}" method="POST">
+                                    <form id="deleteStudentForm{{ $student->id }}" action="{{ url ('admin/students/'.$student->id) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
                                         <div class="modal-header">
@@ -225,7 +225,9 @@
                                         </div>
                                         <div class="modal-footer justify-content-between p-3">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                            <button type="submit" class="btn btn-danger" data-loader-target="#globalLoader">Supprimer</button>
+                                            <button type="button" class="btn btn-danger" data-confirm-title="Suppression de l'étudiant" data-confirm-message="Confirmez-vous la suppression de cet étudiant ?" data-confirm-submit-label="Oui, supprimer" data-confirm-form-id="deleteStudentForm{{ $student->id }}">
+                                                Supprimer
+                                            </button>
                                         </div>
                                     </form>
                                 </div>

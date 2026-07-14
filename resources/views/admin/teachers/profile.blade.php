@@ -1,168 +1,114 @@
 <x-app-layout>
     <div class="bg-light py-4 px-3 px-md-4">
         <div class="container-fluid">
-            {{-- Header --}}
-            <div class="row mb-5">
-                <div class="col-12 text-center">
-                    <div class="mb-4 position-relative">
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=2dd4bf&color=fff&size=120&rounded=true"
-                             class="rounded-circle shadow-lg"
-                             style="width: 120px; height: 120px; border: 4px solid white;"
-                             alt="Avatar">
-                        <div class="position-absolute top-100 start-50 translate-middle d-none" id="avatar-loader">
-                            <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+            <div class="card border-0 shadow-lg rounded-4 mb-4 overflow-hidden" style="background: linear-gradient(135deg, #0f766e, #1d4ed8);">
+                <div class="card-body p-4 p-lg-5 text-white">
+                    <div class="row align-items-center g-4">
+                        <div class="col-lg-8 d-flex align-items-center gap-4">
+                            <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=ffffff&color=0f766e&size=120&rounded=true" class="rounded-circle shadow-lg border border-4 border-white" style="width: 120px; height: 120px;" alt="Avatar">
+                            <div>
+                                <span class="badge bg-white bg-opacity-20 text-white mb-2">Profil enseignant</span>
+                                <h2 class="fw-bold mb-1">{{ auth()->user()->name }}</h2>
+                                <p class="mb-1 fs-5 opacity-90">
+                                    <i class="fas fa-chalkboard-teacher me-2"></i>Enseignant
+                                </p>
+                                <p class="mb-0 opacity-75">{{ auth()->user()->department->name ?? 'Département' }}</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 text-lg-end">
+                            <div class="d-inline-flex flex-wrap gap-2">
+                                @if(auth()->user()->grade)
+                                <span class="badge bg-white text-success px-3 py-2">{{ auth()->user()->grade }}</span>
+                                @endif
+                                @if(auth()->user()->matricule)
+                                <span class="badge bg-white text-success px-3 py-2">{{ auth()->user()->matricule }}</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
-                    <h2 class="fw-bold mb-2">{{ auth()->user()->name }}</h2>
-                    <p class="text-success mb-0 fs-5">
-                        <i class="fas fa-chalkboard-teacher me-2"></i>
-                        Enseignant
-                    </p>
-                    <p class="text-muted fs-6">
-                        {{ auth()->user()->department->name ?? 'Département' }}
-                    </p>
-                    @if(auth()->user()->grade)
-                        <p class="badge bg-success bg-opacity-75 fs-6 px-3 py-2 mt-1">
-                            {{ auth()->user()->grade }}
-                        </p>
-                    @endif
                 </div>
             </div>
 
             <div class="row g-4">
-                {{-- Informations personnelles --}}
                 <div class="col-lg-8">
                     <div class="card border-0 shadow rounded-4 h-100">
-                        <div class="card-header bg-white border-0 pb-0">
+                        <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
                             <h5 class="fw-bold mb-0">
                                 <i class="fas fa-info-circle text-success me-2"></i>
                                 Informations personnelles
                             </h5>
                         </div>
-                        <div class="card-body pt-3">
-                            <div class="row g-4">
+                        <div class="card-body p-4">
+                            <div class="row g-3">
                                 <div class="col-md-6">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-user text-success fs-4 me-3"></i>
-                                        <div>
-                                            <label class="fw-bold text-muted small mb-1 d-block">Nom complet</label>
-                                            <span class="fw-semibold">{{ auth()->user()->name }}</span>
-                                        </div>
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <label class="fw-bold text-muted small mb-1 d-block">Nom complet</label>
+                                        <div class="fw-semibold">{{ auth()->user()->name }}</div>
                                     </div>
                                 </div>
-
                                 <div class="col-md-6">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-envelope text-success fs-4 me-3"></i>
-                                        <div>
-                                            <label class="fw-bold text-muted small mb-1 d-block">Email</label>
-                                            <span class="fw-semibold">{{ auth()->user()->email }}</span>
-                                        </div>
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <label class="fw-bold text-muted small mb-1 d-block">Email</label>
+                                        <div class="fw-semibold">{{ auth()->user()->email }}</div>
                                     </div>
                                 </div>
-
                                 <div class="col-md-6">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-building text-success fs-4 me-3"></i>
-                                        <div>
-                                            <label class="fw-bold text-muted small mb-1 d-block">Département</label>
-                                            <span class="fw-semibold badge bg-light text-dark border rounded-pill px-3 py-2">
-                                                {{ auth()->user()->department->name ?? 'Non assigné' }}
-                                            </span>
-                                        </div>
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <label class="fw-bold text-muted small mb-1 d-block">Département</label>
+                                        <div class="fw-semibold">{{ auth()->user()->department->name ?? 'Non assigné' }}</div>
                                     </div>
                                 </div>
-
+                                <div class="col-md-6">
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <label class="fw-bold text-muted small mb-1 d-block">Rapports assignés</label>
+                                        <div class="fw-semibold text-success">{{ auth()->user()->reports()->count() }} rapport{{ auth()->user()->reports()->count() > 1 ? 's' : '' }}</div>
+                                    </div>
+                                </div>
                                 @if(auth()->user()->filiere)
                                 <div class="col-md-6">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-graduation-cap text-success fs-4 me-3"></i>
-                                        <div>
-                                            <label class="fw-bold text-muted small mb-1 d-block">Spécialité</label>
-                                            <span class="fw-semibold badge bg-success bg-opacity-20 border border-success px-3 py-2">
-                                                {{ auth()->user()->filiere->name }}
-                                            </span>
-                                        </div>
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <label class="fw-bold text-muted small mb-1 d-block">Spécialité</label>
+                                        <div class="fw-semibold">{{ auth()->user()->filiere->name }}</div>
                                     </div>
                                 </div>
                                 @endif
-
-                                <div class="col-md-6">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-calendar text-success fs-4 me-3"></i>
-                                        <div>
-                                            <label class="fw-bold text-muted small mb-1 d-block">Membre depuis</label>
-                                            <span class="text-muted">
-                                                {{ auth()->user()->created_at->format('d/m/Y') }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 @if(auth()->user()->matricule)
                                 <div class="col-md-6">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-id-badge text-success fs-4 me-3"></i>
-                                        <div>
-                                            <label class="fw-bold text-muted small mb-1 d-block">Matricule</label>
-                                            <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-semibold">
-                                                {{ auth()->user()->matricule }}
-                                            </span>
-                                        </div>
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <label class="fw-bold text-muted small mb-1 d-block">Matricule</label>
+                                        <div class="fw-semibold">{{ auth()->user()->matricule }}</div>
                                     </div>
                                 </div>
                                 @endif
-
-                                <div class="col-12">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-users text-success fs-4 me-3"></i>
-                                        <div>
-                                            <label class="fw-bold text-muted small mb-1 d-block">Rapports assignés</label>
-                                            <span class="badge bg-info bg-opacity-20 border border-info px-4 py-2 fs-6">
-                                                {{ auth()->user()->reports()->count() }} rapport{{ auth()->user()->reports()->count() > 1 ? 's' : '' }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {{-- Actions rapides --}}
                 <div class="col-lg-4">
                     <div class="card border-0 shadow rounded-4 h-100">
-                        <div class="card-header bg-white border-0 pb-0">
+                        <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
                             <h6 class="fw-bold mb-0">
                                 <i class="fas fa-cogs text-info me-2"></i>
                                 Actions rapides
                             </h6>
                         </div>
-                        <div class="card-body pt-3">
+                        <div class="card-body p-4">
                             <div class="d-grid gap-3">
                                 <button class="btn btn-success rounded-3 border-0 shadow-sm py-3" data-bs-toggle="modal" data-bs-target="#editProfileModal">
-                                    <i class="fas fa-pen me-2"></i>
-                                    Modifier le profil
+                                    <i class="fas fa-pen me-2"></i>Modifier le profil
                                 </button>
-
                                 <button class="btn btn-outline-success rounded-3 border-0 shadow-sm py-3" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
-                                    <i class="fas fa-key me-2"></i>
-                                    Changer mot de passe
+                                    <i class="fas fa-key me-2"></i>Changer mot de passe
                                 </button>
-
-                                <a href="{{ route('teacher.reports.index') }}" class="btn btn-outline-primary rounded-3 shadow-sm py-3 text-start">
-                                    <i class="fas fa-file-alt me-2"></i>
-                                    Mes rapports ({{ auth()->user()->reports()->count() }})
+                                <a href="{{ route('teacher.reports.index') }}" class="btn btn-outline-primary rounded-3 shadow-sm py-3 text-start" data-loader-target="#globalLoader">
+                                    <i class="fas fa-file-alt me-2"></i>Mes rapports ({{ auth()->user()->reports()->count() }})
                                 </a>
-
-                                <a href="{{ url('/dashboard') }}" class="btn btn-outline-info rounded-3 shadow-sm py-3 text-start">
-                                    <i class="fas fa-tachometer-alt me-2"></i>
-                                    Tableau de bord
+                                <a href="{{ url('/dashboard') }}" class="btn btn-outline-info rounded-3 shadow-sm py-3 text-start" data-loader-target="#globalLoader">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Tableau de bord
                                 </a>
-
                                 <button class="btn btn-outline-danger rounded-3 shadow-sm py-3" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                    <i class="fas fa-sign-out-alt me-2"></i>
-                                    Déconnexion
+                                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
                                 </button>
                             </div>
                         </div>
@@ -189,29 +135,25 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Nom complet</label>
-                                <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-                                       value="{{ old('name', auth()->user()->name) }}" required>
+                                <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', auth()->user()->name) }}" required>
                                 @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Email</label>
-                                <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                                       value="{{ old('email', auth()->user()->email) }}" required>
+                                <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', auth()->user()->email) }}" required>
                                 @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                             @if(auth()->user()->matricule)
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Matricule</label>
-                                <input type="text" name="matricule" class="form-control @error('matricule') is-invalid @enderror"
-                                       value="{{ old('matricule', auth()->user()->matricule) }}">
+                                <input type="text" name="matricule" class="form-control @error('matricule') is-invalid @enderror" value="{{ old('matricule', auth()->user()->matricule) }}">
                                 @error('matricule') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                             @endif
                             @if(auth()->user()->filiere)
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Spécialité</label>
-                                <input type="text" name="specialite" class="form-control @error('specialite') is-invalid @enderror"
-                                       value="{{ old('specialite', auth()->user()->specialite ?? auth()->user()->filiere->name) }}">
+                                <input type="text" name="specialite" class="form-control @error('specialite') is-invalid @enderror" value="{{ old('specialite', auth()->user()->specialite ?? auth()->user()->filiere->name) }}">
                                 @error('specialite') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                             @endif
@@ -219,7 +161,7 @@
                     </div>
                     <div class="modal-footer bg-light rounded-bottom-4">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-success">Enregistrer</button>
+                        <button type="submit" class="btn btn-success" data-loader-target="#globalLoader">Enregistrer</button>
                     </div>
                 </form>
             </div>
@@ -251,7 +193,7 @@
                     </div>
                     <div class="modal-footer bg-light rounded-bottom-4">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-info text-white">Changer</button>
+                        <button type="submit" class="btn btn-info text-white" data-loader-target="#globalLoader">Changer</button>
                     </div>
                 </form>
             </div>
